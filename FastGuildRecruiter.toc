@@ -1,0 +1,70 @@
+## Interface: 100207
+## Title: Fast Guild Recruiter
+## Notes: Advanced guild recruitment tool with anti-spam, blacklist, and message templates
+## Author: PatricNox
+## Version: 1.0.0
+## SavedVariables: FGRDB, devFGRDB
+## SavedVariablesPerCharacter: FGRCharDB, devFGRCharDB
+## OptionalDeps: LibStub, CallbackHandler-1.0, AceAddon-3.0, AceConsole-3.0, AceEvent-3.0, AceTimer-3.0, AceHook-3.0, AceDB-3.0, AceConfig-3.0, AceConfigDialog-3.0, AceLocale-3.0, LibDBIcon-1.0, LibDataBroker-1.1
+
+# Libraries
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+Libs\AceEvent-3.0\AceEvent-3.0.xml
+Libs\AceTimer-3.0\AceTimer-3.0.xml
+Libs\AceHook-3.0\AceHook-3.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\AceLocale-3.0\AceLocale-3.0.xml
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+
+# Locales
+Locales\enUS.lua
+
+# Data and Constants (must be loaded very early)
+Data\Constants.lua
+
+# Utilities (loaded first, Logger must be first)
+Utils\Logger.lua
+Utils\Performance.lua
+Utils\Utils.lua
+Utils\Migration.lua
+
+# Data Sources (loaded after utilities)
+Data\DataSources.lua
+
+# Core (loaded after utilities) - NOTE: SlashCommands moved to after UI modules
+Core\EventManager.lua
+Core\Database.lua
+
+# Modules - Core functionality
+Modules\Invites\MessageTemplates.lua
+Modules\Invites\InviteManager.lua
+Modules\Lists\BlacklistManager.lua
+Modules\Lists\AntiSpamManager.lua
+Modules\Sync\GuildSync.lua
+
+# Modules - UI Components (loaded before SlashCommands so they're available)
+Modules\UI\MinimapIcon.lua
+Modules\UI\ContextMenu.lua
+Modules\UI\RecruitmentFrame.lua
+Modules\UI\MainFrame.lua
+
+# Settings (loaded after UI components)
+Modules\UI\Settings\Modules\General.lua
+Modules\UI\Settings\Modules\Recruitment.lua
+Modules\UI\Settings\Modules\Messages.lua
+Modules\UI\Settings\Modules\AntiSpam.lua
+Modules\UI\Settings\Modules\Blacklist.lua
+Modules\UI\Settings\Modules\Zones.lua
+Modules\UI\Settings\Modules\About.lua
+Modules\UI\Settings\SettingsManager.lua
+
+# Core SlashCommands (loaded after UI modules are available)
+Core\SlashCommands.lua
+
+# Main initialization (must be loaded last)
+Core\Init.lua
