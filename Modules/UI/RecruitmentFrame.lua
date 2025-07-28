@@ -112,6 +112,7 @@ function RecruitmentFrame:ProcessWhoResults_Polling()
             if playerInfo.name and playerInfo.name ~= UnitName("player") then
                 if self:PassesFilters(playerInfo) then
                     foundPlayers[playerInfo.name] = playerInfo
+                    selectedPlayers[playerInfo.name] = playerInfo
                     validCount = validCount + 1
                     print("|cFF3EB9D8[FGR-DEBUG]|r   -> Added to found players: " .. playerInfo.name)
                 else
@@ -707,10 +708,11 @@ function RecruitmentFrame:PassesFilters(player)
     if player.level < minLevel or player.level > maxLevel then
         return false
     end
-    local guildedCheck = self.guildFilterCheck and self.guildFilterCheck:GetChecked()
-    if guildedCheck and player.guild and player.guild ~= "" then
+
+    if player.guild and player.guild ~= "" then
         return false
     end
+
     if player.name == UnitName("player") then
         return false
     end
@@ -772,6 +774,7 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     local checkbox = CreateFrame("CheckButton", nil, entry, "InterfaceOptionsCheckButtonTemplate")
     checkbox:SetPoint("LEFT", entry, "LEFT", 5, 0)
     checkbox:SetSize(20, 20)
+    checkbox:SetChecked(true)
     checkbox:SetScript("OnClick", function(self)
         if self:GetChecked() then
             selectedPlayers[playerData.name] = playerData
