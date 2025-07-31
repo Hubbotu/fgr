@@ -428,7 +428,13 @@ function RecruitmentFrame:RefreshFromSettings()
     end
 
     if self.sendInviteBtn then
-        self.sendInviteBtn:SetShown(self.inviteMode == "invite_only" or self.inviteMode == "invite_and_message")
+        local im = self.inviteMode
+        self.sendInviteBtn:SetShown(im == "invite_only" or im == "invite_and_message" or im == "just_message")
+        if im == "just_message" then
+            self.sendInviteBtn:SetText("Send Message")
+        else
+            self.sendInviteBtn:SetText("Send Invite")
+        end
     end
 
     print("|cFF3EB9D8[FGR]|r Recruitment frame refreshed from settings")
@@ -599,9 +605,17 @@ function RecruitmentFrame:UpdateActionButtonVisibility()
     for _ in pairs(foundPlayers) do hasPlayers = true; break end
 
     if self.sendInviteBtn then
-        self.sendInviteBtn:SetShown(hasPlayers and (self.inviteMode == "invite_only" or self.inviteMode == "invite_and_message"))
+        local im = self.inviteMode
+        self.sendInviteBtn:SetShown(im == "invite_only" or im == "invite_and_message" or im == "just_message")
+        if im == "just_message" then
+            self.sendInviteBtn:SetText("Send Message")
+        else
+            self.sendInviteBtn:SetText("Send Invite")
+        end
+
         self:UpdateSendInviteButtonState()
     end
+
     if self.blacklistBtn then self.blacklistBtn:SetShown(hasPlayers) end
     if self.clearBtn then self.clearBtn:SetShown(hasPlayers) end
 end
@@ -615,57 +629,55 @@ function RecruitmentFrame:UpdateSendInviteButtonState()
 end
 
 function RecruitmentFrame:SendNextInvite()
-    -- Only enable this button for invite modes that send invites
-    if self.inviteMode ~= "invite_only" and self.inviteMode ~= "invite_and_message" then
+    local im = self.inviteMode
+    if im ~= "invite_only" and im ~= "invite_and_message" and im ~= "just_message" then
         self:UpdateStatus("Invite mode not selected", "orange")
         return
     end
 
-    -- Get the next selected player from the table
-    local nextToInvite = nil
+    -- Find the next selected player as before
+    local nextToSend = nil
     for name, data in pairs(selectedPlayers) do
-        nextToInvite = { name = name, data = data }
-        break  -- Only the first one
-    end
-
-    if not nextToInvite then
-        self:UpdateStatus("No players selected", "orange")
-        return
-    end
-
-     -- Get the "first" player in foundPlayers (top of list)
-    local topName, topData
-    for name, data in pairs(foundPlayers) do  -- use foundPlayers for deterministic "top" of UI
-        topName = name
-        topData = data
+        nextToSend = { name = name, data = data }
         break
     end
-    if not topName or not topData then
+
+    if not nextToSend then
         self:UpdateStatus("No players selected", "orange")
-        self:UpdateActionButtonVisibility()
         return
     end
 
-    -- Remove from selection & player list beforehand
-    selectedPlayers[topName] = nil
-    foundPlayers[topName] = nil
+    selectedPlayers[nextToSend.name] = nil
+    foundPlayers[nextToSend.name] = nil
 
-    -- Invite (as before)
-    GuildInvite(topName)
-    self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
-    print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. topName)
+    -- INVITE LOGIC
+    if im == "invite_only" then
+        GuildInvite(nextToSend.name)
+        self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
+        print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. nextToSend.name)
 
-    -- If also message:
-    if self.inviteMode == "invite_and_message" and self.selectedMessage and self.selectedMessage.message then
-        local message = self:FormatMessage(self.selectedMessage.message, topName)
-        SendChatMessage(message, "WHISPER", nil, topName)
-        print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. topName)
+    elseif im == "invite_and_message" then
+        GuildInvite(nextToSend.name)
+        self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
+        if self.selectedMessage and self.selectedMessage.message then
+            local message = self:FormatMessage(self.selectedMessage.message, nextToSend.name)
+            SendChatMessage(message, "WHISPER", nil, nextToSend.name)
+            print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. nextToSend.name)
+        end
+
+    elseif im == "just_message" then
+        if self.selectedMessage and self.selectedMessage.message then
+            local message = self:FormatMessage(self.selectedMessage.message, nextToSend.name)
+            SendChatMessage(message, "WHISPER", nil, nextToSend.name)
+            self.sessionStats.messagesOnly = (self.sessionStats.messagesOnly or 0) + 1
+            print("|cFF3EB9D8[FGR]|r Sent message to: " .. nextToSend.name)
+        end
     end
 
-    -- Add to anti-spam
+    -- Anti-spam
     if not ns.tblAntiSpamList then ns.tblAntiSpamList = {} end
-    ns.tblAntiSpamList[string.lower(topName)] = {
-        name = topName,
+    ns.tblAntiSpamList[string.lower(nextToSend.name)] = {
+        name = nextToSend.name,
         time = time()
     }
 
@@ -1235,7 +1247,13 @@ function RecruitmentFrame:RefreshUI()
     self:UpdateSelectionCount()
 
     if self.sendInviteBtn then
-    self.sendInviteBtn:SetShown(self.inviteMode == "invite_only" or self.inviteMode == "invite_and_message")
+        local im = self.inviteMode
+        self.sendInviteBtn:SetShown(im == "invite_only" or im == "invite_and_message" or im == "just_message")
+        if im == "just_message" then
+            self.sendInviteBtn:SetText("Send Message")
+        else
+            self.sendInviteBtn:SetText("Send Invite")
+        end
     end
 end
 
