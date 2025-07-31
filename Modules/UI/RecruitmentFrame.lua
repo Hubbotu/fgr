@@ -11,6 +11,7 @@ local selectedPlayers = {}
 local currentFilter = "ALL"
 local lastScanTime = 0
 local scanCooldown = 15 -- Fixed at 15 seconds
+local playerCheckboxes = {}
 
 -- Reliable, one-time event frame for WHO_LIST_UPDATE (do not register per-scan)
 local eventFrame = CreateFrame("Frame")
@@ -112,7 +113,6 @@ function RecruitmentFrame:ProcessWhoResults_Polling()
             if playerInfo.name and playerInfo.name ~= UnitName("player") then
                 if self:PassesFilters(playerInfo) then
                     foundPlayers[playerInfo.name] = playerInfo
-                    selectedPlayers[playerInfo.name] = playerInfo
                     validCount = validCount + 1
                     print("|cFF3EB9D8[FGR-DEBUG]|r   -> Added to found players: " .. playerInfo.name)
                 else
@@ -132,6 +132,7 @@ function RecruitmentFrame:ProcessWhoResults_Polling()
         self:UpdateStatus("No valid WHO results", "orange")
     end
 
+    self:UpdateActionButtonVisibility()
     self:ReEnableScanButton()
 end
 
@@ -426,6 +427,10 @@ function RecruitmentFrame:RefreshFromSettings()
         end)
     end
 
+    if self.sendInviteBtn then
+        self.sendInviteBtn:SetShown(self.inviteMode == "invite_only" or self.inviteMode == "invite_and_message")
+    end
+
     print("|cFF3EB9D8[FGR]|r Recruitment frame refreshed from settings")
 end
 
@@ -494,13 +499,23 @@ function RecruitmentFrame:CreatePlayerList()
     listHeader:SetTextColor(0.24, 0.73, 0.85)
     self.listHeader = listHeader
 
-    local selectAllCheck = CreateFrame("CheckButton", nil, frame, "InterfaceOptionsCheckButtonTemplate")
-    selectAllCheck:SetPoint("LEFT", listHeader, "RIGHT", 20, 0)
-    selectAllCheck.Text:SetText("Select All")
-    selectAllCheck:SetScript("OnClick", function(self)
-        RecruitmentFrame:SelectAllPlayers(self:GetChecked())
+    local selectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    selectAllBtn:SetPoint("LEFT", listHeader, "RIGHT", 20, 0)
+    selectAllBtn:SetSize(90, 22)
+    selectAllBtn:SetText("Select All")
+    selectAllBtn:SetScript("OnClick", function()
+        RecruitmentFrame:SelectAllPlayersButton()
     end)
-    self.selectAllCheck = selectAllCheck
+    self.selectAllBtn = selectAllBtn
+
+    local deselectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    deselectAllBtn:SetPoint("LEFT", selectAllBtn, "RIGHT", 5, 0)
+    deselectAllBtn:SetSize(90, 22)
+    deselectAllBtn:SetText("Deselect All")
+    deselectAllBtn:SetScript("OnClick", function()
+        RecruitmentFrame:DeselectAllPlayersButton()
+    end)
+    self.deselectAllBtn = deselectAllBtn
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame)
     scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset - 30)
@@ -537,22 +552,27 @@ end
 
 function RecruitmentFrame:CreateActionButtons()
     local frame = self.frame
-    local inviteBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    inviteBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 20)
-    inviteBtn:SetSize(120, 30)
-    inviteBtn:SetText("Invite Selected")
-    inviteBtn:SetScript("OnClick", function()
-        self:InviteSelectedPlayers()
+
+    local sendInviteBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    sendInviteBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 20)
+    sendInviteBtn:SetSize(120, 30)
+    sendInviteBtn:SetText("Send Invite")
+    sendInviteBtn:SetScript("OnClick", function()
+        self:SendNextInvite()
     end)
-    self.inviteButton = inviteBtn
+    sendInviteBtn:Hide()
+    self.sendInviteBtn = sendInviteBtn
 
     local blacklistBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    blacklistBtn:SetPoint("LEFT", inviteBtn, "RIGHT", 10, 0)
+    blacklistBtn:SetPoint("LEFT", sendInviteBtn, "RIGHT", 10, 0)
     blacklistBtn:SetSize(120, 30)
     blacklistBtn:SetText("Blacklist Selected")
     blacklistBtn:SetScript("OnClick", function()
         self:BlacklistSelectedPlayers()
     end)
+    blacklistBtn:Hide()
+    self.blacklistBtn = blacklistBtn
+
     local clearBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
     clearBtn:SetPoint("LEFT", blacklistBtn, "RIGHT", 10, 0)
     clearBtn:SetSize(80, 30)
@@ -560,6 +580,9 @@ function RecruitmentFrame:CreateActionButtons()
     clearBtn:SetScript("OnClick", function()
         self:ClearPlayerList()
     end)
+    clearBtn:Hide()
+    self.clearBtn = clearBtn
+
     local settingsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
     settingsBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 20)
     settingsBtn:SetSize(80, 30)
@@ -569,6 +592,98 @@ function RecruitmentFrame:CreateActionButtons()
             ns.SettingsManager:OpenSettings()
         end
     end)
+end
+
+function RecruitmentFrame:UpdateActionButtonVisibility()
+    local hasPlayers = false
+    for _ in pairs(foundPlayers) do hasPlayers = true; break end
+
+    if self.sendInviteBtn then
+        self.sendInviteBtn:SetShown(hasPlayers and (self.inviteMode == "invite_only" or self.inviteMode == "invite_and_message"))
+        self:UpdateSendInviteButtonState()
+    end
+    if self.blacklistBtn then self.blacklistBtn:SetShown(hasPlayers) end
+    if self.clearBtn then self.clearBtn:SetShown(hasPlayers) end
+end
+
+function RecruitmentFrame:UpdateSendInviteButtonState()
+    local enabled = false
+    for _ in pairs(selectedPlayers) do enabled = true; break end
+    if self.sendInviteBtn then
+        self.sendInviteBtn:SetEnabled(enabled)
+    end
+end
+
+function RecruitmentFrame:SendNextInvite()
+    -- Only enable this button for invite modes that send invites
+    if self.inviteMode ~= "invite_only" and self.inviteMode ~= "invite_and_message" then
+        self:UpdateStatus("Invite mode not selected", "orange")
+        return
+    end
+
+    -- Get the next selected player from the table
+    local nextToInvite = nil
+    for name, data in pairs(selectedPlayers) do
+        nextToInvite = { name = name, data = data }
+        break  -- Only the first one
+    end
+
+    if not nextToInvite then
+        self:UpdateStatus("No players selected", "orange")
+        return
+    end
+
+     -- Get the "first" player in foundPlayers (top of list)
+    local topName, topData
+    for name, data in pairs(foundPlayers) do  -- use foundPlayers for deterministic "top" of UI
+        topName = name
+        topData = data
+        break
+    end
+    if not topName or not topData then
+        self:UpdateStatus("No players selected", "orange")
+        self:UpdateActionButtonVisibility()
+        return
+    end
+
+    -- Remove from selection & player list beforehand
+    selectedPlayers[topName] = nil
+    foundPlayers[topName] = nil
+
+    -- Invite (as before)
+    GuildInvite(topName)
+    self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
+    print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. topName)
+
+    -- If also message:
+    if self.inviteMode == "invite_and_message" and self.selectedMessage and self.selectedMessage.message then
+        local message = self:FormatMessage(self.selectedMessage.message, topName)
+        SendChatMessage(message, "WHISPER", nil, topName)
+        print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. topName)
+    end
+
+    -- Add to anti-spam
+    if not ns.tblAntiSpamList then ns.tblAntiSpamList = {} end
+    ns.tblAntiSpamList[string.lower(topName)] = {
+        name = topName,
+        time = time()
+    }
+
+    self:RefreshPlayerList()
+    self:UpdatePlayerCount()
+    self:UpdateSessionStats()
+    self:UpdateActionButtonVisibility()
+end
+
+function RecruitmentFrame:UpdateSendInviteButtonState()
+    if self.sendInviteBtn then
+        local hasSelection = false
+        for _, _ in pairs(selectedPlayers) do
+            hasSelection = true
+            break
+        end
+        self.sendInviteBtn:SetEnabled(hasSelection)
+    end
 end
 
 function RecruitmentFrame:CreateStatusSection()
@@ -745,6 +860,7 @@ function RecruitmentFrame:PassesFilters(player)
 end
 
 function RecruitmentFrame:RefreshPlayerList()
+    playerCheckboxes = {}
     for i = self.playerScrollChild:GetNumChildren(), 1, -1 do
         local child = select(i, self.playerScrollChild:GetChildren())
         child:Hide()
@@ -760,6 +876,8 @@ function RecruitmentFrame:RefreshPlayerList()
     end
 
     self.playerScrollChild:SetHeight(math.max(100, -yOffset))
+    self:UpdateSendInviteButtonState()
+    self:UpdateActionButtonVisibility()
 end
 
 function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
@@ -774,7 +892,7 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     local checkbox = CreateFrame("CheckButton", nil, entry, "InterfaceOptionsCheckButtonTemplate")
     checkbox:SetPoint("LEFT", entry, "LEFT", 5, 0)
     checkbox:SetSize(20, 20)
-    checkbox:SetChecked(true)
+    checkbox:SetChecked(selectedPlayers[playerData.name] == playerData)
     checkbox:SetScript("OnClick", function(self)
         if self:GetChecked() then
             selectedPlayers[playerData.name] = playerData
@@ -782,7 +900,10 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
             selectedPlayers[playerData.name] = nil
         end
         RecruitmentFrame:UpdateSelectionCount()
+        RecruitmentFrame:UpdateSendInviteButtonState()
     end)
+
+    playerCheckboxes[playerData.name] = checkbox
 
     local nameText = entry:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     nameText:SetPoint("LEFT", checkbox, "RIGHT", 5, 0)
@@ -796,6 +917,7 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     classText:SetText(playerData.class)
     classText:SetTextColor(0.6, 0.8, 1)
 
+    self:UpdateSendInviteButtonState()
     return entry
 end
 
@@ -973,6 +1095,7 @@ function RecruitmentFrame:BlacklistSelectedPlayers()
     selectedPlayers = {}
     self:RefreshPlayerList()
     self:UpdatePlayerCount()
+    self:UpdateActionButtonVisibility()
     self:UpdateStatus(string.format("%d players blacklisted", count), "green")
 end
 
@@ -981,19 +1104,8 @@ function RecruitmentFrame:ClearPlayerList()
     selectedPlayers = {}
     self:RefreshPlayerList()
     self:UpdatePlayerCount()
+    self:UpdateActionButtonVisibility()
     self:UpdateStatus("Player list cleared", "green")
-end
-
-function RecruitmentFrame:SelectAllPlayers(selected)
-    if selected then
-        for name, data in pairs(foundPlayers) do
-            selectedPlayers[name] = data
-        end
-    else
-        selectedPlayers = {}
-    end
-    self:RefreshPlayerList()
-    self:UpdateSelectionCount()
 end
 
 function RecruitmentFrame:GetMessageList()
@@ -1121,6 +1233,10 @@ function RecruitmentFrame:RefreshUI()
     end
     self:UpdatePlayerCount()
     self:UpdateSelectionCount()
+
+    if self.sendInviteBtn then
+    self.sendInviteBtn:SetShown(self.inviteMode == "invite_only" or self.inviteMode == "invite_and_message")
+    end
 end
 
 function RecruitmentFrame:UpdateSessionStats()
@@ -1138,7 +1254,7 @@ function RecruitmentFrame:Initialize()
     self.frame = nil
     self.playerList = {}
     self.scanButton = nil
-    self.inviteButton = nil
+    self.sendinviteButton = nil
     self.messageDropdown = nil
     self.playerScrollFrame = nil
     self.statusText = nil
@@ -1167,6 +1283,28 @@ function RecruitmentFrame:Initialize()
     end
     self:EnsureGuildLink()
     print("[FGR] RecruitmentFrame module initialized")
+end
+
+function RecruitmentFrame:SelectAllPlayersButton()
+    for name, data in pairs(foundPlayers) do
+        selectedPlayers[name] = data
+        if playerCheckboxes[name] then
+            playerCheckboxes[name]:SetChecked(true)
+        end
+    end
+    self:UpdateSelectionCount()
+    self:UpdateSendInviteButtonState()
+end
+
+function RecruitmentFrame:DeselectAllPlayersButton()
+    for name, data in pairs(foundPlayers) do
+        selectedPlayers[name] = nil
+        if playerCheckboxes[name] then
+            playerCheckboxes[name]:SetChecked(false)
+        end
+    end
+    self:UpdateSelectionCount()
+    self:UpdateSendInviteButtonState()
 end
 
 RecruitmentFrame:Initialize()
