@@ -1403,9 +1403,6 @@ function RecruitmentFrame:ExtractAndDisplayRaiderIOData(profileData)
         self:ProcessRaiderIORaidProfile(profileData.raidProfile)
     else
         -- print("|cFF00FFFF[FGR-DEBUG]|r *** NO raidProfile found - player may not have raid data")
-        
-        -- Try to get raid data directly from RaiderIO
-        self:TryDirectRaidProfileAccess(profileData.name, profileData.realm, profileData.region)
     end
     
     -- Extract Mythic+ data
