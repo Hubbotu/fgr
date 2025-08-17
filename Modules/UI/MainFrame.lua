@@ -74,10 +74,8 @@
         
         local function updateStatus()
             local status = {}
-            table.insert(status, "Version: " .. (FGR.version or "Unknown"))
             table.insert(status, "In Guild: " .. (IsInGuild() and "Yes" or "No"))
             table.insert(status, "Can Invite: " .. (CanGuildInvite() and "Yes" or "No"))
-            table.insert(status, "Debug Mode: " .. (FGR.debug and "On" or "Off"))
             
             if ns.tblBlackList then
                 local count = 0
@@ -160,44 +158,9 @@
                 print("|cFFFF0000[FGR]|r Settings not available")
             end
         end)
-        
-        -- Debug toggle button
-        local debugBtn = CreateFrame("Button", nil, content, "GameMenuButtonTemplate")
-        debugBtn:SetPoint("LEFT", settingsBtn, "RIGHT", 10, 0)
-        debugBtn:SetSize(120, 22)
-        debugBtn:SetText("Toggle Debug")
-        debugBtn:SetNormalFontObject("GameFontNormal")
-        debugBtn:SetScript("OnClick", function()
-            FGR.debug = not FGR.debug
-            updateStatus()
-            print("|cFF3EB9D8[FGR]|r Debug mode: " .. (FGR.debug and "|cFF00FF00ON|r" or "|cFFFF0000OFF|r"))
-        end)
-        
+
         yOffset = yOffset - 35
-        
-        -- Reload button
-        local reloadBtn = CreateFrame("Button", nil, content, "GameMenuButtonTemplate")
-        reloadBtn:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
-        reloadBtn:SetSize(120, 22)
-        reloadBtn:SetText("Reload UI")
-        reloadBtn:SetNormalFontObject("GameFontNormal")
-        reloadBtn:SetScript("OnClick", function()
-            ReloadUI()
-        end)
-        
-        -- Refresh button
-        local refreshBtn = CreateFrame("Button", nil, content, "GameMenuButtonTemplate")
-        refreshBtn:SetPoint("LEFT", reloadBtn, "RIGHT", 10, 0)
-        refreshBtn:SetSize(120, 22)
-        refreshBtn:SetText("Refresh")
-        refreshBtn:SetNormalFontObject("GameFontNormal")
-        refreshBtn:SetScript("OnClick", function()
-            updateStatus()
-            print("|cFF3EB9D8[FGR]|r Status refreshed")
-        end)
-        
-        yOffset = yOffset - 50
-        
+
         -- Help section
         local helpLabel = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         helpLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 10, yOffset)

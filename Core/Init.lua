@@ -86,7 +86,6 @@ function Core:Initialize()
     self.isEnabled = false
     self.fullyStarted = false
     self.ignoreAutoSync = false
-    self.obeyBlockInvites = true
     self.minimapIcon = nil
     
     -- Set up version info
@@ -110,38 +109,20 @@ function Core:InitializeBasicSystems()
     ns.tblBlackList = ns.tblBlackList or {}
     ns.tblAntiSpamList = ns.tblAntiSpamList or {}
     
+    -- Initialize WindowManager EARLY (before other UI systems)
+    if ns.WindowManager then
+        ns.WindowManager:Initialize()
+    end
+    
     -- Set up player info
     if ns.Utils and ns.Utils.CreatePlayerString then
         ns.fPlayerName = ns.Utils:CreatePlayerString(GetUnitName('player', false), UnitClassBase('player'))
     else
         ns.fPlayerName = GetUnitName('player', false)
     end
-    
-    -- Initialize UI systems
-    if ns.UI and ns.UI.MainFrame then
-        if ns.Logger then
-            ns.Logger:Debug("MainFrame module available")
-        end
-    end
-    
-    -- Initialize Settings Manager with error handling
-    if ns.SettingsManager and not ns.SettingsManager.isInitialized then
-        local success, err = pcall(function()
-            ns.SettingsManager:Initialize()
-        end)
-        
-        if not success then
-            if ns.Logger then
-                ns.Logger:Warn("Settings manager initialization failed: %s", tostring(err))
-            else
-                print("|cFFFFFF00[FGR]|r Settings initialization failed: " .. tostring(err))
-            end
-        end
-    end
-    
-    -- Basic settings initialization
-    self:InitializeBasicSettings()
 end
+    
+    -- Rest of the function stays the same...
 
 function Core:InitializeBasicSettings()
     -- Initialize basic settings even without full database
@@ -330,7 +311,6 @@ function Core:SetupGuild(clubID)
     else
         if ns.guild and ns.guild.leadership then
             ns.gmActive = ns.guild.leadership.gmActive or false
-            ns.obeyBlockInvites = (ns.gmSettings and ns.gmSettings.obeyBlockInvites) or (ns.gSettings and ns.gSettings.obeyBlockInvites) or true
             
             if GetUnitName('player', true) == ns.guild.leadership.guildLeaderToon then
                 ns.guild.leadership.isGuildLeader = false

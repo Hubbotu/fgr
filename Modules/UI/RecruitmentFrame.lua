@@ -1,6 +1,5 @@
 -- Modules/UI/RecruitmentFrame.lua
 local addonName, ns = ...
-
 ns.RecruitmentFrame = {}
 local RecruitmentFrame = ns.RecruitmentFrame
 
@@ -34,18 +33,18 @@ function RecruitmentFrame:SendActualWhoQuery(query, className)
     local timeSinceLastQuery = GetTime() - (self.lastWhoTime or 0)
     if timeSinceLastQuery < 5 then
         local waitTime = 5 - timeSinceLastQuery
-        print("|cFF3EB9D8[FGR-DEBUG]|r WHO query on cooldown, waiting " .. string.format("%.1f", waitTime) .. " seconds")
+        -- print("|cFF3EB9D8[FGR-DEBUG]|r WHO query on cooldown, waiting " .. string.format("%.1f", waitTime) .. " seconds")
         C_Timer.After(waitTime, function()
             self:SendActualWhoQuery(query, className)
         end)
         return
     end
 
-    print("|cFF3EB9D8[FGR-DEBUG]|r Sending WHO query: " .. query)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Sending WHO query: " .. query)
     C_FriendList.SetWhoToUi(true)
     local success = pcall(function() C_FriendList.SendWho(query) end)
     if not success then
-        print("|cFF3EB9D8[FGR-DEBUG]|r SendWho failed with pcall protection")
+        -- print("|cFF3EB9D8[FGR-DEBUG]|r SendWho failed with pcall protection")
         self:HandleWhoQueryFailure("SendWho failed")
         self.awaitingResults = false
         self._whoResultsExpected = false
@@ -57,7 +56,7 @@ function RecruitmentFrame:SendActualWhoQuery(query, className)
     -- Failsafe: After 8 seconds, if not processed, treat as failure
     C_Timer.After(8, function()
         if self._whoResultsExpected then
-            print("|cFF3EB9D8[FGR-DEBUG]|r WHO query timed out after 8 seconds (no event received)")
+            -- print("|cFF3EB9D8[FGR-DEBUG]|r WHO query timed out after 8 seconds (no event received)")
             self:HandleWhoQueryFailure("Polling timeout")
             self.awaitingResults = false
             self._whoResultsExpected = false
@@ -68,7 +67,7 @@ end
 function RecruitmentFrame:_OnWhoListUpdate()
     -- Only process if we expected results
     if not self._whoResultsExpected then return end
-    print("|cFF3EB9D8[FGR-DEBUG]|r WHO_LIST_UPDATE event received. Processing results!")
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r WHO_LIST_UPDATE event received. Processing results!")
     self._whoResultsExpected = false
     self.awaitingResults = false
     self:ProcessWhoResults_Polling()
@@ -80,7 +79,7 @@ function RecruitmentFrame:ProcessWhoResults_Polling()
     local results = {}
     local numResults = C_FriendList.GetNumWhoResults()
 
-    print("|cFF3EB9D8[FGR-DEBUG]|r Processing " .. numResults .. " WHO results via event")
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Processing " .. numResults .. " WHO results via event")
 
     for i = 1, numResults do
         local info = C_FriendList.GetWhoInfo(i)
@@ -99,12 +98,12 @@ function RecruitmentFrame:ProcessWhoResults_Polling()
                     queryTime = GetTime()
                 }
                 table.insert(results, playerData)
-                print("|cFF3EB9D8[FGR-DEBUG]|r   Added: " .. playerName .. " (" .. playerClass .. ")")
+                -- print("|cFF3EB9D8[FGR-DEBUG]|r   Added: " .. playerName .. " (" .. playerClass .. ")")
             end
         end
     end
 
-    print("|cFF3EB9D8[FGR]|r Processing " .. #results .. " valid players")
+    -- print("|cFF3EB9D8[FGR]|r Processing " .. #results .. " valid players")
 
     if #results > 0 then
         local validCount = 0
@@ -114,10 +113,10 @@ function RecruitmentFrame:ProcessWhoResults_Polling()
                 if self:PassesFilters(playerInfo) then
                     foundPlayers[playerInfo.name] = playerInfo
                     validCount = validCount + 1
-                    print("|cFF3EB9D8[FGR-DEBUG]|r   -> Added to found players: " .. playerInfo.name)
+                    -- print("|cFF3EB9D8[FGR-DEBUG]|r   -> Added to found players: " .. playerInfo.name)
                 else
                     filteredCount = filteredCount + 1
-                    print("|cFF3EB9D8[FGR-DEBUG]|r   -> Filtered out: " .. playerInfo.name)
+                    -- print("|cFF3EB9D8[FGR-DEBUG]|r   -> Filtered out: " .. playerInfo.name)
                 end
             end
         end
@@ -178,20 +177,20 @@ function RecruitmentFrame:ReEnableScanButton()
 end
 
 function RecruitmentFrame:ExecuteWhoQuery(query, className)
-    print("|cFF3EB9D8[FGR]|r Executing WHO query: " .. query)
+    -- print("|cFF3EB9D8[FGR]|r Executing WHO query: " .. query)
 
     -- Level range (from settings)
     local minLevel = (ns.pSettings and ns.pSettings.minLevel) or 1
     local maxLevel = (ns.pSettings and ns.pSettings.maxLevel) or GetMaxPlayerLevel()
 
-    print("|cFF3EB9D8[FGR-DEBUG]|r Settings check:")
-    print("|cFF3EB9D8[FGR-DEBUG]|r   ns.pSettings exists: " .. tostring(ns.pSettings ~= nil))
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Settings check:")
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r   ns.pSettings exists: " .. tostring(ns.pSettings ~= nil))
     if ns.pSettings then
-        print("|cFF3EB9D8[FGR-DEBUG]|r   minLevel setting: " .. tostring(ns.pSettings.minLevel))
-        print("|cFF3EB9D8[FGR-DEBUG]|r   maxLevel setting: " .. tostring(ns.pSettings.maxLevel))
+        -- print("|cFF3EB9D8[FGR-DEBUG]|r   minLevel setting: " .. tostring(ns.pSettings.minLevel))
+        -- print("|cFF3EB9D8[FGR-DEBUG]|r   maxLevel setting: " .. tostring(ns.pSettings.maxLevel))
     end
-    print("|cFF3EB9D8[FGR-DEBUG]|r   Final minLevel: " .. minLevel)
-    print("|cFF3EB9D8[FGR-DEBUG]|r   Final maxLevel: " .. maxLevel)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r   Final minLevel: " .. minLevel)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r   Final maxLevel: " .. maxLevel)
 
     local finalQuery = query
     if className then
@@ -200,7 +199,7 @@ function RecruitmentFrame:ExecuteWhoQuery(query, className)
         -- Uncomment and test the above if needed.
     end
 
-    print("|cFF3EB9D8[FGR-DEBUG]|r Final query with level range: " .. finalQuery)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Final query with level range: " .. finalQuery)
     self:SendActualWhoQuery(finalQuery, className)
 end
 
@@ -209,15 +208,25 @@ function RecruitmentFrame:Show()
         self:CreateFrame()
     end
     
-    if self.frame then
-        self.frame:Show()
-        self:RefreshUI()
+    -- Use WindowManager to show this window (and close others)
+    if ns.WindowManager then
+        ns.WindowManager:ShowWindow("recruitment")
+    else
+        -- Fallback
+        if self.frame then
+            self.frame:Show()
+            self:RefreshUI()
+        end
     end
 end
 
 function RecruitmentFrame:Hide()
-    if self.frame then
-        self.frame:Hide()
+    if ns.WindowManager then
+        ns.WindowManager:HideWindow("recruitment")
+    else
+        if self.frame then
+            self.frame:Hide()
+        end
     end
 end
 
@@ -253,8 +262,23 @@ function RecruitmentFrame:CreateFrame()
     self:CreateActionButtons()
     self:CreateStatusSection()
     
+    -- Register with WindowManager after frame creation
+    if ns.WindowManager then
+        ns.WindowManager:RegisterWindow(
+            "recruitment",
+            self.frame,
+            function() 
+                self.frame:Show()
+                self:RefreshUI()
+            end,
+            function() 
+                self.frame:Hide()
+            end
+        )
+    end
+    
     self.isInitialized = true
-    print("[FGR] Recruitment frame created successfully")
+    -- print("[FGR] Recruitment frame created successfully")
 end
 
 function RecruitmentFrame:CreateScanSection()
@@ -323,7 +347,7 @@ function RecruitmentFrame:CreateFilterSection()
     classFilterCheck:SetScript("OnClick", function(self)
         if not ns.pSettings then ns.pSettings = {} end
         ns.pSettings.enableClassFilter = self:GetChecked()
-        print("|cFF3EB9D8[FGR]|r Class filter: " .. (ns.pSettings.enableClassFilter and "ON" or "OFF"))
+        -- print("|cFF3EB9D8[FGR]|r Class filter: " .. (ns.pSettings.enableClassFilter and "ON" or "OFF"))
     end)
     self.classFilterCheck = classFilterCheck
 
@@ -376,7 +400,7 @@ function RecruitmentFrame:UpdateLevelDisplay()
     local minLevel = (ns.pSettings and ns.pSettings.minLevel) or 1
     local maxLevel = (ns.pSettings and ns.pSettings.maxLevel) or GetMaxPlayerLevel()
     self.levelDisplay:SetText(string.format("%d - %d", minLevel, maxLevel))
-    print("|cFF3EB9D8[FGR-DEBUG]|r Level display updated to: " .. minLevel .. "-" .. maxLevel)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Level display updated to: " .. minLevel .. "-" .. maxLevel)
 end
 
 function RecruitmentFrame:RefreshFromSettings()
@@ -437,7 +461,7 @@ function RecruitmentFrame:RefreshFromSettings()
         end
     end
 
-    print("|cFF3EB9D8[FGR]|r Recruitment frame refreshed from settings")
+    -- print("|cFF3EB9D8[FGR]|r Recruitment frame refreshed from settings")
 end
 
 function RecruitmentFrame:CreateMessageSection()
@@ -654,7 +678,7 @@ function RecruitmentFrame:SendNextInvite()
     if im == "invite_only" then
         GuildInvite(nextToSend.name)
         self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
-        print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. nextToSend.name)
+        -- print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. nextToSend.name)
 
     elseif im == "invite_and_message" then
         GuildInvite(nextToSend.name)
@@ -662,7 +686,7 @@ function RecruitmentFrame:SendNextInvite()
         if self.selectedMessage and self.selectedMessage.message then
             local message = self:FormatMessage(self.selectedMessage.message, nextToSend.name)
             SendChatMessage(message, "WHISPER", nil, nextToSend.name)
-            print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. nextToSend.name)
+            -- print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. nextToSend.name)
         end
 
     elseif im == "just_message" then
@@ -670,7 +694,7 @@ function RecruitmentFrame:SendNextInvite()
             local message = self:FormatMessage(self.selectedMessage.message, nextToSend.name)
             SendChatMessage(message, "WHISPER", nil, nextToSend.name)
             self.sessionStats.messagesOnly = (self.sessionStats.messagesOnly or 0) + 1
-            print("|cFF3EB9D8[FGR]|r Sent message to: " .. nextToSend.name)
+            -- print("|cFF3EB9D8[FGR]|r Sent message to: " .. nextToSend.name)
         end
     end
 
@@ -733,7 +757,7 @@ function RecruitmentFrame:StartPlayerScan()
         local buttonText = self.scanButton:GetText()
         if buttonText and buttonText:match("^Next:") then
             self.currentClassIndex = (self.currentClassIndex or 1) + 1
-            print("|cFF3EB9D8[FGR]|r Manually advancing to class " .. self.currentClassIndex)
+            -- print("|cFF3EB9D8[FGR]|r Manually advancing to class " .. self.currentClassIndex)
         end
     end
 
@@ -783,7 +807,7 @@ function RecruitmentFrame:ScanNearbyPlayers()
 
         if #self.selectedClassList == 0 then
             self:UpdateStatus("No classes selected in filter", "orange")
-            print("|cFF3EB9D8[FGR]|r No classes selected - cannot scan")
+            -- print("|cFF3EB9D8[FGR]|r No classes selected - cannot scan")
             return
         end
 
@@ -796,13 +820,13 @@ function RecruitmentFrame:ScanNearbyPlayers()
         end
 
         local classQuery = "c-" .. string.lower(currentClass)
-        print("|cFF3EB9D8[FGR]|r Class scan mode: scanning " .. self.currentClassIndex .. "/" .. #self.selectedClassList .. ": " .. currentClass)
-        print("|cFF3EB9D8[FGR]|r Executing class query: " .. classQuery)
+        -- print("|cFF3EB9D8[FGR]|r Class scan mode: scanning " .. self.currentClassIndex .. "/" .. #self.selectedClassList .. ": " .. currentClass)
+        -- print("|cFF3EB9D8[FGR]|r Executing class query: " .. classQuery)
         self.currentScanClass = currentClass
         self:ExecuteWhoQuery(classQuery, currentClass)
 
     else
-        print("|cFF3EB9D8[FGR]|r No class filter, using level-only query")
+        -- print("|cFF3EB9D8[FGR]|r No class filter, using level-only query")
         self.isClassScanMode = false
         self.currentScanClass = nil
         local levelQuery = string.format("%d-%d", minLevel, maxLevel)
@@ -893,6 +917,7 @@ function RecruitmentFrame:RefreshPlayerList()
 end
 
 function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
+    local classColor = RAID_CLASS_COLORS[playerData.class] or {r=1, g=1, b=1}
     local entry = CreateFrame("Frame", nil, self.playerScrollChild)
     entry:SetPoint("TOPLEFT", self.playerScrollChild, "TOPLEFT", 5, yOffset)
     entry:SetSize(self.playerScrollChild:GetWidth() - 10, 23)
@@ -917,9 +942,35 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
 
     playerCheckboxes[playerData.name] = checkbox
 
-    local nameText = entry:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    nameText:SetPoint("LEFT", checkbox, "RIGHT", 5, 0)
+    local nameFrame = CreateFrame("Frame", nil, entry)
+    nameFrame:SetPoint("LEFT", entry, "LEFT", 5, 0)
+    nameFrame:SetSize(150, 20)
+    nameFrame:EnableMouse(true)
+    
+    local nameText = nameFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    nameText:SetPoint("LEFT", nameFrame, "LEFT", 25, 0)
     nameText:SetText(playerData.name)
+    nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
+    nameFrame:SetScript("OnMouseUp", function(self, button)
+        local classColor = RAID_CLASS_COLORS[playerData.class] or {r=1, g=1, b=1}
+        nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
+    end)
+
+    nameFrame:SetScript("OnEnter", function(self)
+        RecruitmentFrame:ShowPlayerTooltip(self, playerData)
+    end)
+    
+    nameFrame:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+    end)
+    
+    nameFrame:SetScript("OnMouseDown", function(self)
+        nameText:SetTextColor(0.8, 0.8, 0.8) 
+    end)
+    
+    nameFrame:SetScript("OnMouseUp", function(self)
+        nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
+    end)
     local levelText = entry:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     levelText:SetPoint("LEFT", nameText, "RIGHT", 20, 0)
     levelText:SetText("Level " .. playerData.level)
@@ -933,44 +984,1022 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     return entry
 end
 
-function RecruitmentFrame:InviteSelectedPlayers()
-    local count = 0
-    for _ in pairs(selectedPlayers) do count = count + 1 end
+-- Remove any LibStub calls from the top of the file
 
-    if count == 0 then
-        self:UpdateStatus("No players selected", "orange")
+function RecruitmentFrame:GetRaiderIOReference()
+    -- Try multiple ways to access RaiderIO
+    local RaiderIO = nil
+    
+    -- Method 1: Try LibStub with different possible names
+    if LibStub then
+        local possibleNames = {
+            "LibRaiderIO-1.0",
+            "RaiderIO-1.0", 
+            "RaiderIO",
+            "LibRaiderIO"
+        }
+        
+        for _, name in ipairs(possibleNames) do
+            local success, lib = pcall(LibStub, name, true) -- true = silent
+            if success and lib then
+                RaiderIO = lib
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Found RaiderIO via LibStub: " .. name)
+                break
+            end
+        end
+    end
+    
+    -- Method 2: Try global RaiderIO table
+    if not RaiderIO and _G.RaiderIO then
+        RaiderIO = _G.RaiderIO
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Found RaiderIO via global table")
+    end
+    
+    -- Method 3: Try addon table
+    if not RaiderIO and _G.RaiderIO_DB then
+        -- RaiderIO might store its API elsewhere
+        for name, addon in pairs(_G) do
+            if type(addon) == "table" and name:find("RaiderIO") and addon.ShowTooltip then
+                RaiderIO = addon
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Found RaiderIO via addon scan: " .. name)
+                break
+            end
+        end
+    end
+    
+    return RaiderIO
+end
+
+function RecruitmentFrame:ShowPlayerTooltip(frame, playerData)
+    GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
+    GameTooltip:ClearLines()
+    
+    local classColor = RAID_CLASS_COLORS[playerData.class] or {r=1, g=1, b=1}
+    local unitName = playerData.name
+    
+    -- Handle cross-realm names
+    if playerData.realm and playerData.realm ~= GetRealmName() then
+        unitName = playerData.name .. "-" .. playerData.realm
+    end
+    
+    -- IMPORTANT: Set the tooltip's unit BEFORE adding lines
+    -- This is what RaiderIO looks for
+    GameTooltip.unit = unitName
+    
+    -- Try to set tooltip as if it's a unit tooltip (RaiderIO expects this)
+    GameTooltip:SetText(playerData.name, classColor.r, classColor.g, classColor.b)
+    GameTooltip:AddLine(string.format("Level %d %s", playerData.level or 0, playerData.class or "Unknown"), 1, 1, 1)
+    
+    if playerData.race then
+        GameTooltip:AddLine(playerData.race, 0.8, 0.8, 1)
+    end
+    
+    if playerData.zone then
+        GameTooltip:AddLine("Zone: " .. playerData.zone, 0.8, 0.8, 0.8)
+    end
+    
+    -- Guild info
+    if playerData.guild and playerData.guild ~= "" then
+        GameTooltip:AddLine("Guild: " .. playerData.guild, 0.7, 0.9, 0.7)
+    else
+        GameTooltip:AddLine("No Guild", 0.6, 0.6, 0.6)
+    end
+    
+    -- Show the tooltip first
+    GameTooltip:Show()
+    
+    self:EnhanceTooltipWithRaiderIO(playerData, unitName)
+    
+    GameTooltip:Show()
+end
+
+
+function RecruitmentFrame:CheckPlayerRaiderIOData(unitName, RaiderIO)
+    -- Check if RaiderIO has data for this player
+    local checkMethods = {
+        "GetPlayerProfile",
+        "GetProfile", 
+        "GetRaidProfile",
+        "HasData",
+        "GetPlayerData",
+        "GetCharacterData"
+    }
+    -- First, let's discover ALL available methods and properties
+    -- print("|cFF00FFFF[FGR-DEBUG]|r === COMPLETE RAIDERIO OBJECT ANALYSIS ===")
+    
+    local methods = {}
+    local properties = {}
+    local totalCount = 0
+    
+    -- Safely iterate through RaiderIO
+    local success, error = pcall(function()
+        for k, v in pairs(RaiderIO) do
+            totalCount = totalCount + 1
+            if type(v) == "function" then
+                table.insert(methods, k)
+                -- print("|cFF00FFFF[FGR-DEBUG]|r METHOD: " .. tostring(k) .. "()")
+            elseif type(v) == "table" then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r TABLE: " .. tostring(k) .. " [table]")
+                table.insert(properties, tostring(k) .. " [table]")
+            else
+                -- print("|cFF00FFFF[FGR-DEBUG]|r PROPERTY: " .. tostring(k) .. " = " .. tostring(v))
+                table.insert(properties, tostring(k) .. " = " .. tostring(v))
+            end
+        end
+    end)
+    
+    if not success then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Error analyzing RaiderIO object: " .. tostring(error))
+        return nil
+    end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r")
+    -- print("|cFF00FFFF[FGR-DEBUG]|r SUMMARY:")
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Total items: " .. tostring(totalCount))
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Methods found: " .. tostring(#methods))
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Properties found: " .. tostring(#properties))
+    
+    if #methods > 0 then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r")
+        -- print("|cFF00FFFF[FGR-DEBUG]|r ALL AVAILABLE METHODS:")
+        for i, method in ipairs(methods) do
+            if i <= 20 then -- Limit output to first 20 methods
+                -- print("|cFF00FFFF[FGR-DEBUG]|r   - " .. tostring(method) .. "()")
+            elseif i == 21 then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r   ... and " .. tostring(#methods - 20) .. " more methods")
+                break
+            end
+        end
+    end
+    
+    -- Look for tooltip or raid related methods specifically
+    -- print("|cFF00FFFF[FGR-DEBUG]|r")
+    -- print("|cFF00FFFF[FGR-DEBUG]|r TOOLTIP/RAID RELATED METHODS:")
+    local foundPromising = false
+    for _, method in ipairs(methods) do
+        local lower = string.lower(tostring(method))
+        if lower:find("tooltip") or lower:find("raid") or lower:find("profile") or lower:find("show") then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   *** " .. tostring(method) .. "() - LOOKS PROMISING!")
+            foundPromising = true
+        end
+    end
+    
+    if not foundPromising then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r   No obviously promising methods found")
+    end
+
+    for _, methodName in ipairs(checkMethods) do
+        if RaiderIO[methodName] and type(RaiderIO[methodName]) == "function" then
+            local success, data = pcall(RaiderIO[methodName], unitName)
+                -- print("|cFF00FFFF[FGR-DEBUG]|r found method: " .. methodName )
+            if success and data then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r " .. methodName .. " returned data for " .. unitName)
+                 if methodName == "GetRaidProfile" and type(data) == "table" then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Found RAID profile data! Extracting...")
+                    self:ExtractAndDisplayRaidProfile(data)
+                    return data
+                end
+                if methodName == "GetProfile" and type(data) == "table" then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Found profile data, extracting...")
+                    self:ExtractAndDisplayRaiderIOData(data)
+                    return data
+                end
+                
+                if type(data) == "table" then
+                    for k, v in pairs(data) do
+                        -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": " .. tostring(v))
+                    end
+                end
+                return data
+            elseif success then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r " .. methodName .. " returned no data for " .. unitName)
+            end
+        end
+    end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r No data check methods found or no data available")
+    return nil
+end
+
+function RecruitmentFrame:ExtractAndDisplayRaidProfile(raidProfileData)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Extracting RAID profile data...")
+    
+    if not raidProfileData then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r No raid profile data provided")
         return
     end
-
-    local actionText = ""
-    if self.inviteMode == "invite_only" then
-        actionText = "Send guild invites to"
-    elseif self.inviteMode == "invite_and_message" then
-        actionText = "Send guild invites and messages to"
-    elseif self.inviteMode == "just_message" then
-        actionText = "Send messages to"
+    
+    -- Debug: Show all keys in the raid profile
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Raid profile structure:")
+    for k, v in pairs(raidProfileData) do
+        if type(v) == "table" then
+            local count = 0
+            for _ in pairs(v) do count = count + 1 end
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": [table with " .. count .. " entries]")
+        else
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": " .. tostring(v))
+        end
     end
-
-    local message = string.format("%s %d selected players?", actionText, count)
-    if self.selectedMessage and (self.inviteMode == "invite_and_message" or self.inviteMode == "just_message") then
-        message = message .. "\nMessage: " .. (self.selectedMessage.desc or "Custom Message")
+    
+    -- Add raid progress section to tooltip
+    local raidDataFound = false
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Raid Progress:", 0.9, 0.7, 1)
+    
+    -- Try different possible structures for raid data
+    local raidSources = {
+        raidProfileData,                    -- Direct raid data
+        raidProfileData.raids,              -- raids table
+        raidProfileData.raidProfile,        -- nested raidProfile
+        raidProfileData.currentRaid,        -- current raid
+        raidProfileData.raidProgress,       -- raid progress
+    }
+    
+    for _, source in ipairs(raidSources) do
+        if source and type(source) == "table" then
+            local foundInSource = self:ProcessRaidDataSource(source, "raid_source")
+            if foundInSource then
+                raidDataFound = true
+                break
+            end
+        end
     end
-
-    local statusText = ""
-    if self.inviteMode == "invite_only" then
-        statusText = string.format("Inviting %d players...", count)
-    elseif self.inviteMode == "invite_and_message" then
-        statusText = string.format("Inviting and messaging %d players...", count)
-    elseif self.inviteMode == "just_message" then
-        statusText = string.format("Messaging %d players...", count)
+    
+    -- If no structured raid data found, try to extract any raid-looking data
+    if not raidDataFound then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r No structured raid data found, scanning for raid-related fields...")
+        self:ScanForRaidFields(raidProfileData)
     end
+    
+    GameTooltip:Show()
+end
 
-    self:UpdateStatus(statusText, "yellow")
-    local playersToInvite = {}
-    for name, data in pairs(selectedPlayers) do
-        table.insert(playersToInvite, {name = name, data = data})
+function RecruitmentFrame:ProcessRaidDataSource(raidData, sourceName)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Processing raid data from " .. sourceName)
+    
+    local dataFound = false
+    
+    -- Try to iterate through raid instances
+    for raidName, raidInfo in pairs(raidData) do
+        if type(raidInfo) == "table" then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Processing raid: " .. raidName)
+            
+            -- Try different raid progress formats
+            local progressText = self:ExtractRaidProgress(raidInfo, raidName)
+            
+            if progressText then
+                GameTooltip:AddLine("  " .. raidName .. ": " .. progressText, 0.8, 0.8, 1)
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Added raid progress: " .. raidName .. " - " .. progressText)
+                dataFound = true
+            end
+        end
     end
-    self:ProcessInviteQueue(playersToInvite)
+    
+    return dataFound
+end
+
+function RecruitmentFrame:ExtractRaidProgress(raidInfo, raidName)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Extracting progress for " .. raidName)
+    
+    -- Debug raid info structure
+    for k, v in pairs(raidInfo) do
+        -- print("|cFF00FFFF[FGR-DEBUG]|r     " .. k .. ": " .. tostring(v))
+    end
+    
+    -- Try multiple formats for raid progress
+    local progressFormats = {
+        -- Format 1: Direct summary
+        function()
+            if raidInfo.summary then
+                return raidInfo.summary
+            end
+        end,
+        
+        -- Format 2: Difficulty-based progress (N/H/M)
+        function()
+            local progress = ""
+            if raidInfo.normal then
+                if raidInfo.normal.cleared or raidInfo.normal.killed then
+                    progress = progress .. "N"
+                elseif raidInfo.normal.progress then
+                    progress = progress .. "N(" .. raidInfo.normal.progress .. ")"
+                end
+            end
+            if raidInfo.heroic then
+                if raidInfo.heroic.cleared or raidInfo.heroic.killed then
+                    progress = progress .. "H"
+                elseif raidInfo.heroic.progress then
+                    progress = progress .. "H(" .. raidInfo.heroic.progress .. ")"
+                end
+            end
+            if raidInfo.mythic then
+                if raidInfo.mythic.cleared or raidInfo.mythic.killed then
+                    progress = progress .. "M"
+                elseif raidInfo.mythic.progress then
+                    progress = progress .. "M(" .. raidInfo.mythic.progress .. ")"
+                end
+            end
+            return progress ~= "" and progress or nil
+        end,
+        
+        -- Format 3: Boss count format (8/8, 9/9, etc.)
+        function()
+            if raidInfo.bossesKilled and raidInfo.totalBosses then
+                return raidInfo.bossesKilled .. "/" .. raidInfo.totalBosses
+            elseif raidInfo.killed and raidInfo.total then
+                return raidInfo.killed .. "/" .. raidInfo.total
+            elseif raidInfo.progress and type(raidInfo.progress) == "string" and raidInfo.progress:match("%d+/%d+") then
+                return raidInfo.progress
+            end
+        end,
+        
+        -- Format 4: Look for any numeric progress
+        function()
+            for k, v in pairs(raidInfo) do
+                if type(v) == "number" and v > 0 and k:lower():find("kill") then
+                    return k .. ": " .. v
+                end
+            end
+        end,
+        
+        -- Format 5: Look for boolean flags
+        function()
+            if raidInfo.cleared == true then
+                return "Cleared"
+            elseif raidInfo.completed == true then
+                return "Completed"
+            end
+        end
+    }
+    
+    for i, formatFunc in ipairs(progressFormats) do
+        local result = formatFunc()
+        if result then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Format " .. i .. " succeeded: " .. result)
+            return result
+        end
+    end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r No progress format matched for " .. raidName)
+    return nil
+end
+
+function RecruitmentFrame:ScanForRaidFields(data)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Scanning for any raid-related fields...")
+    
+    local raidKeywords = {
+        "raid", "boss", "progress", "kill", "clear", "defeat",
+        "palace", "vault", "sanctum", "sepulcher", "castle", "temple"
+    }
+    
+    for key, value in pairs(data) do
+        local keyLower = tostring(key):lower()
+        
+        -- Check if key contains raid-related words
+        for _, keyword in ipairs(raidKeywords) do
+            if keyLower:find(keyword) then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Found raid-related field: " .. key)
+                
+                if type(value) == "table" then
+                    -- Try to extract meaningful data from this table
+                    local extractedData = self:ProcessRaidDataSource(value, key)
+                    if extractedData then
+                        return -- Found something useful
+                    end
+                else
+                    -- Simple value, display it
+                    GameTooltip:AddLine("  " .. key .. ": " .. tostring(value), 0.7, 0.7, 0.7)
+                end
+                break
+            end
+        end
+    end
+end
+function RecruitmentFrame:ExtractAndDisplayRaiderIOData(profileData)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Extracting RaiderIO data from profile...")
+    
+    if not profileData then
+        return
+    end
+    
+    -- DEBUG: Let's see ALL top-level fields in the profile
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Full profile structure:")
+    for k, v in pairs(profileData) do
+        if type(v) == "table" then
+            local count = 0
+            for _ in pairs(v) do count = count + 1 end
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": [table with " .. count .. " entries]")
+        else
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": " .. tostring(v))
+        end
+    end
+    
+    -- Add separator line
+    GameTooltip:AddLine(" ____________ ")
+    
+    -- CHECK FOR RAID PROFILE FIRST
+    if profileData.raidProfile then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r *** FOUND raidProfile! Processing...")
+        self:ProcessRaiderIORaidProfile(profileData.raidProfile)
+    else
+        -- print("|cFF00FFFF[FGR-DEBUG]|r *** NO raidProfile found - player may not have raid data")
+        
+        -- Try to get raid data directly from RaiderIO
+        self:TryDirectRaidProfileAccess(profileData.name, profileData.realm, profileData.region)
+    end
+    
+    -- Extract Mythic+ data
+    if profileData.mythicKeystoneProfile then
+        local mp = profileData.mythicKeystoneProfile
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Processing mythicKeystoneProfile...")
+        
+        if mp.currentScore and mp.currentScore > 0 then
+            GameTooltip:AddLine("RaiderIO Score: " .. mp.currentScore, 1, 0.5, 0)
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Added score: " .. mp.currentScore)
+        end
+        
+        if mp.previousScore and mp.previousScore > 0 and mp.previousScore ~= mp.currentScore then
+            GameTooltip:AddLine("Previous Season: " .. mp.previousScore, 0.8, 0.6, 0.2)
+        end
+        
+        if mp.maxDungeonLevel and mp.maxDungeonLevel > 0 then
+            GameTooltip:AddLine("Highest Key: +" .. mp.maxDungeonLevel, 0.6, 0.9, 0.6)
+        end
+        
+        local dungeonData = mp.sortedDungeons or mp.dungeons
+        if dungeonData then
+            self:DisplayDungeonData(dungeonData)
+        end
+    else
+        -- print("|cFF00FFFF[FGR-DEBUG]|r No mythicKeystoneProfile found")
+    end
+    
+    GameTooltip:Show()
+end
+
+-- NEW: Process RaiderIO raid profile using their format
+function RecruitmentFrame:ProcessRaiderIORaidProfile(raidProfile)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Processing RaiderIO raid profile...")
+    
+    -- Debug the raid profile structure
+    for k, v in pairs(raidProfile) do
+        if type(v) == "table" then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": [table with " .. self:GetTableSize(v) .. " entries]")
+        else
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": " .. tostring(v))
+        end
+    end
+    
+    -- Look for progress data (as seen in RaiderIO source)
+    if raidProfile.progress and type(raidProfile.progress) == "table" then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Found raid progress data!")
+        
+        GameTooltip:AddLine("Raid Progress:", 0.9, 0.7, 1)
+        
+        for i, progress in ipairs(raidProfile.progress) do
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Processing progress entry " .. i)
+            
+            if progress.raid and progress.killsPerBoss then
+                local raidName = progress.raid.shortName or progress.raid.name or "Unknown Raid"
+                local difficulty = self:GetRaidDifficultyInfo(progress.difficulty)
+                
+                -- Count total bosses killed
+                local totalKills = 0
+                local maxBosses = progress.raid.bossCount or #progress.killsPerBoss
+                
+                for j, kills in ipairs(progress.killsPerBoss) do
+                    if kills > 0 then
+                        totalKills = totalKills + 1
+                    end
+                end
+                
+                if totalKills > 0 then
+                    local progressText = string.format("%s %s: %d/%d", 
+                        difficulty.suffix or difficulty.name, 
+                        raidName, 
+                        totalKills, 
+                        maxBosses)
+                    
+                    local color = difficulty.color or {r = 1, g = 1, b = 1}
+                    GameTooltip:AddLine(progressText, color.r, color.g, color.b)
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Added: " .. progressText)
+                end
+            end
+        end
+    else
+        -- print("|cFF00FFFF[FGR-DEBUG]|r No progress data found in raid profile")
+    end
+end
+function RecruitmentFrame:TryRaidProviderAccess(playerName, realm, region)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Trying raid provider access...")
+    
+    -- Check for RaiderIO's internal namespace
+    local ns = _G.RaiderIO
+    if ns and ns.PROVIDER_DATA_TYPE then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Found RaiderIO namespace with provider types")
+        
+        -- Try to access the providers array
+        if _G.RaiderIO_DB and _G.RaiderIO_DB.db then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Checking RaiderIO_DB for providers...")
+            
+            -- Look for raid providers
+            local db = _G.RaiderIO_DB.db
+            for providerKey, providerData in pairs(db) do
+                if type(providerData) == "table" and providerData.region == region then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Found provider: " .. providerKey .. " for region " .. region)
+                    
+                    -- Check if this provider has raid data
+                    if providerKey:lower():find("raid") then
+                        -- print("|cFF00FFFF[FGR-DEBUG]|r Found raid provider!")
+                        
+                        -- Try to find the player in this provider
+                        local playerKey = playerName .. "-" .. realm
+                        if providerData.lookup and providerData.lookup[playerKey] then
+                            -- print("|cFF00FFFF[FGR-DEBUG]|r Found " .. playerKey .. " in raid provider!")
+                            
+                            local lookupIndex = providerData.lookup[playerKey]
+                            if providerData.data and providerData.data[lookupIndex] then
+                                local raidData = providerData.data[lookupIndex]
+                                -- print("|cFF00FFFF[FGR-DEBUG]|r Extracting raid data from provider...")
+                                self:ProcessProviderRaidData(raidData, playerName)
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return false
+end
+function RecruitmentFrame:ProcessProviderRaidData(raidData, playerName)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Processing provider raid data for " .. playerName)
+    
+    -- Debug the structure
+    for k, v in pairs(raidData) do
+        if type(v) == "table" then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": [table]")
+        else
+            -- print("|cFF00FFFF[FGR-DEBUG]|r   " .. k .. ": " .. tostring(v))
+        end
+    end
+    
+    GameTooltip:AddLine("Raid Progress:", 0.9, 0.7, 1)
+    
+    -- Try to extract raid progress in various formats
+    if raidData.raids and type(raidData.raids) == "table" then
+        for _, raid in ipairs(raidData.raids) do
+            local progress = self:ExtractRaidProgressFromProvider(raid)
+            if progress then
+                GameTooltip:AddLine("  " .. progress, 0.8, 0.8, 1)
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Added raid progress: " .. progress)
+            end
+        end
+    end
+end
+
+function RecruitmentFrame:ExtractRaidProgressFromProvider(raidInfo)
+    if not raidInfo then return nil end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Extracting progress from raid info:")
+    for k, v in pairs(raidInfo) do
+        -- print("|cFF00FFFF[FGR-DEBUG]|r     " .. k .. ": " .. tostring(v))
+    end
+    
+    -- Try different progress formats
+    local raidName = raidInfo.name or raidInfo.shortName or "Unknown Raid"
+    
+    -- Format 1: Direct progress numbers
+    if raidInfo.normal and type(raidInfo.normal) == "number" then
+        return string.format("%s Normal: %d", raidName, raidInfo.normal)
+    end
+    
+    -- Format 2: Kills array
+    if raidInfo.kills and type(raidInfo.kills) == "table" then
+        local totalKills = 0
+        for _, kills in ipairs(raidInfo.kills) do
+            totalKills = totalKills + (kills > 0 and 1 or 0)
+        end
+        local maxBosses = #raidInfo.kills
+        return string.format("%s: %d/%d", raidName, totalKills, maxBosses)
+    end
+    
+    return nil
+end
+
+function RecruitmentFrame:TriggerRaiderIORaidLoad(playerName, realm, region)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Attempting to trigger RaiderIO raid data load...")
+    
+    local RaiderIO = self:GetRaiderIOReference()
+    if not RaiderIO then return false end
+    
+    -- Try to call RaiderIO's internal functions to load raid data
+    local loadFunctions = {
+        "LoadRaidData",
+        "RefreshProfile", 
+        "UpdateProfile",
+        "GetRaidProfile",
+    }
+    
+    for _, funcName in ipairs(loadFunctions) do
+        if RaiderIO[funcName] then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Trying " .. funcName .. "...")
+            
+            local success, result = pcall(RaiderIO[funcName], playerName .. "-" .. realm)
+            if not success then
+                success, result = pcall(RaiderIO[funcName], playerName, realm)
+            end
+            
+            if success and result then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r " .. funcName .. " succeeded!")
+                
+                -- Try GetProfile again after loading
+                local success2, profileData = pcall(RaiderIO.GetProfile, playerName .. "-" .. realm)
+                if success2 and profileData and profileData.raidProfile then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Raid profile now available after " .. funcName .. "!")
+                    self:ProcessRaiderIORaidProfile(profileData.raidProfile)
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+function RecruitmentFrame:CheckRaiderIOInternalData(playerName, realm, region)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Checking RaiderIO internal data structures...")
+    
+    -- Check various RaiderIO globals for cached data
+    local dataSources = {
+        _G.RaiderIO_CharacterData,
+        _G.RaiderIO_Cache,
+        _G.RaiderIO_ProfileCache,
+        _G.RaiderIO_Data,
+    }
+    
+    local playerKey = playerName .. "-" .. realm
+    
+    for i, dataSource in ipairs(dataSources) do
+        if dataSource and type(dataSource) == "table" then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Checking data source " .. i)
+            
+            if dataSource[playerKey] then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Found " .. playerKey .. " in data source " .. i)
+                
+                local playerData = dataSource[playerKey]
+                if playerData.raidProfile or playerData.raids then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Found raid data in cached source!")
+                    
+                    local raidData = playerData.raidProfile or playerData.raids
+                    self:ProcessRaiderIORaidProfile(raidData)
+                    return true
+                end
+            end
+            
+            -- Also check by region/realm structure
+            if dataSource[region] and dataSource[region][realm] and dataSource[region][realm][playerName] then
+                local playerData = dataSource[region][realm][playerName]
+                if playerData.raidProfile or playerData.raids then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r Found raid data in regional cache!")
+                    
+                    local raidData = playerData.raidProfile or playerData.raids
+                    self:ProcessRaiderIORaidProfile(raidData)
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+
+
+-- Helper function to get raid difficulty info
+function RecruitmentFrame:GetRaidDifficultyInfo(difficulty)
+    local difficulties = {
+        [1] = {name = "LFR", suffix = "L", color = {r = 0.5, g = 1, b = 0.5}},
+        [2] = {name = "Normal", suffix = "N", color = {r = 1, g = 1, b = 1}},
+        [3] = {name = "Heroic", suffix = "H", color = {r = 0, g = 1, b = 1}},
+        [4] = {name = "Mythic", suffix = "M", color = {r = 1, g = 0.5, b = 0}},
+    }
+    
+    return difficulties[difficulty] or {name = "Unknown", suffix = "?", color = {r = 0.7, g = 0.7, b = 0.7}}
+end
+
+-- Also check if we can access RaiderIO's provider data directly
+function RecruitmentFrame:TryProviderDataAccess(playerName, realm, region)
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Attempting provider data access...")
+    
+    -- Try to access RaiderIO's internal data structures
+    if _G.RaiderIO_DB and _G.RaiderIO_DB.providers then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Found RaiderIO_DB providers")
+        
+        for i, provider in ipairs(_G.RaiderIO_DB.providers) do
+            if provider.region == region and provider.data and provider.data == "Raid" then
+                -- print("|cFF00FFFF[FGR-DEBUG]|r Found raid provider for region " .. region)
+                
+                -- Try to access the provider's lookup data
+                if provider.lookup and provider.db then
+                    local lookupKey = playerName .. "-" .. realm
+                    if provider.lookup[lookupKey] then
+                        -- print("|cFF00FFFF[FGR-DEBUG]|r Found player in raid provider lookup!")
+                        -- Try to extract raid data from provider.db
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+function RecruitmentFrame:DisplayDungeonData(dungeonData)
+    if not dungeonData or type(dungeonData) ~= "table" then
+        return
+    end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r DisplayDungeonData called")
+    
+    local dungeonCount = 0
+    for _ in pairs(dungeonData) do dungeonCount = dungeonCount + 1 end
+    
+    local runsDisplayed = 0
+    
+    -- dungeonData might be an array or a keyed table
+    for key, dungeon in pairs(dungeonData) do
+        if runsDisplayed >= 8 then break end -- Show up to 8 dungeons
+        
+        if type(dungeon) == "table" then
+            
+            local dungeonName = "Unknown"
+            local level = 0
+            local timed = nil
+            local score = 0
+            
+            -- Extract level from top level
+            level = dungeon.level or dungeon.keystoneLevel or dungeon.mythicLevel or 0
+            
+            -- Extract timing info - chests > 0 usually means timed
+            if dungeon.chests then
+                timed = dungeon.chests > 0
+            elseif dungeon.fractionalTime then
+                timed = dungeon.fractionalTime > 0
+            end
+            
+            -- Extract dungeon name from nested dungeon table
+            if dungeon.dungeon and type(dungeon.dungeon) == "table" then
+                local nestedDungeon = dungeon.dungeon
+                
+                -- Try various name fields in the nested table
+                dungeonName = nestedDungeon.name or 
+                            nestedDungeon.shortName or 
+                            nestedDungeon.short_name or
+                            nestedDungeon.slug or
+                            nestedDungeon.displayName or
+                            nestedDungeon.zone or
+                            dungeonName
+                            
+                -- If still unknown, try to extract from sortOrder or other fields
+                if dungeonName == "Unknown" and dungeon.sortOrder then
+                    -- sortOrder might be something like "92-98-HOA" where HOA is abbreviation
+                    local sortParts = {strsplit("-", dungeon.sortOrder)}
+                    if sortParts[3] then
+                        local abbrev = sortParts[3]
+                        dungeonName = self:GetDungeonNameFromAbbreviation(abbrev)
+                    end
+                end
+            end
+            
+            -- Extract score if available
+            score = dungeon.score or dungeon.points or 0
+            
+            if level > 0 then
+                local levelColor = self:GetKeystoneLevelColor(level)
+                local timedText = ""
+                
+                if timed == true then
+                    timedText = " (Timed)"
+                elseif timed == false then
+                    timedText = " (Untimed)"
+                end
+                
+                local scoreText = score > 0 and (" (" .. score .. ")") or ""
+                local runText = string.format("%s +%d%s%s", dungeonName, level, timedText, scoreText)
+                
+                GameTooltip:AddLine(runText, levelColor.r, levelColor.g, levelColor.b)
+                runsDisplayed = runsDisplayed + 1
+            end
+        end
+    end
+    
+    if runsDisplayed == 0 then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r No dungeon runs could be displayed")
+    else
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Displayed " .. runsDisplayed .. " dungeon runs")
+    end
+end
+
+-- Also let's create a mapping for common dungeon abbreviations
+function RecruitmentFrame:GetDungeonNameFromAbbreviation(abbrev)
+    local dungeonMap = {
+        ["HOA"] = "Halls of Atonement",
+        ["PF"] = "Plaguefall",
+        ["MOTS"] = "Mists of Tirna Scithe", 
+        ["DOS"] = "De Other Side",
+        ["SOA"] = "Spires of Ascension",
+        ["TOP"] = "Theater of Pain",
+        ["NW"] = "Necrotic Wake",
+        ["SD"] = "Sanguine Depths",
+        ["COT"] = "Court of Stars",
+        ["LOWR"] = "Lower Karazhan",
+        ["UPPR"] = "Upper Karazhan",
+        ["COT"] = "Cathedral of Eternal Night",
+        -- Add more as needed
+    }
+    
+    return dungeonMap[abbrev] or abbrev
+end
+
+
+function RecruitmentFrame:GetTableSize(tbl)
+    local count = 0
+    for _ in pairs(tbl) do count = count + 1 end
+    return count
+end
+
+
+function RecruitmentFrame:EnhanceTooltipWithRaiderIO(playerData, unitName)
+    local RaiderIO = self:GetRaiderIOReference()
+    
+    if not RaiderIO then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r RaiderIO not found")
+        return
+    end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r RaiderIO detected, attempting tooltip enhancement for: " .. unitName)
+    
+    -- First, try to get and display data manually
+    local profileData = self:CheckPlayerRaiderIOData(unitName, RaiderIO)
+    
+    if profileData then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Profile data found, manual extraction complete")
+        return true
+    end
+    
+    -- Fallback: Try the standard ShowTooltip method
+    if RaiderIO.ShowTooltip then
+        local beforeLines = GameTooltip:NumLines()
+        local success, result = pcall(RaiderIO.ShowTooltip, GameTooltip, unitName)
+        local afterLines = GameTooltip:NumLines()
+        
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Before: " .. beforeLines .. " lines, After: " .. afterLines .. " lines")
+        
+        if success and afterLines > beforeLines then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r RaiderIO.ShowTooltip added " .. (afterLines - beforeLines) .. " lines")
+            GameTooltip:Show()
+            return true
+        end
+    end
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r No RaiderIO data could be displayed")
+    return false
+end
+
+
+
+function RecruitmentFrame:TryDirectRaiderIOInsertion(unitName, RaiderIO)
+    -- Try to get RaiderIO data directly and add it manually
+    
+    -- Look for data in RaiderIO's database
+    if RaiderIO_DB then
+        -- print("|cFF00FFFF[FGR-DEBUG]|r Checking RaiderIO_DB for player data")
+        
+        -- RaiderIO stores data by realm and character name
+        local playerName = unitName
+        local realm = GetRealmName()
+        
+        if unitName:find("-") then
+            local name, realmName = unitName:match("([^-]+)-(.+)")
+            if name and realmName then
+                playerName = name
+                realm = realmName
+            end
+        end
+        
+        -- Try to find the player in RaiderIO's database
+        if RaiderIO_DB.characters and RaiderIO_DB.characters[realm] and RaiderIO_DB.characters[realm][playerName] then
+            local charData = RaiderIO_DB.characters[realm][playerName]
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Found player data in RaiderIO_DB")
+            self:AddRaiderIODataManually(charData)
+            return true
+        else
+            -- print("|cFF00FFFF[FGR-DEBUG]|r No player data found in RaiderIO_DB for " .. playerName .. " on " .. realm)
+        end
+    end
+    
+    return false
+end
+
+function RecruitmentFrame:AddRaiderIODataManually(charData)
+    GameTooltip:AddLine(" ") -- Empty line
+    
+    -- Add Mythic+ score if available
+    if charData.mythicKeystoneProfile then
+        local mp = charData.mythicKeystoneProfile
+        if mp.currentScore and mp.currentScore > 0 then
+            GameTooltip:AddLine("Mythic+ Score: " .. mp.currentScore, 1, 0.5, 0)
+        end
+        
+        -- Add best runs
+        if mp.bestRuns then
+            for i, run in ipairs(mp.bestRuns) do
+                if i <= 3 and run.dungeon and run.mythicLevel then -- Show top 3
+                    local levelColor = self:GetKeystoneLevelColor(run.mythicLevel)
+                    GameTooltip:AddLine(
+                        string.format("%s +%d (%s)", 
+                            run.dungeon.short_name or run.dungeon.name, 
+                            run.mythicLevel,
+                            run.affixes and #run.affixes > 0 and "timed" or "completed"
+                        ), 
+                        levelColor.r, levelColor.g, levelColor.b
+                    )
+                end
+            end
+        end
+    end
+    
+    -- Add raid progress if available
+    if charData.raidProfile then
+        local rp = charData.raidProfile
+        for raidName, raidData in pairs(rp) do
+            if raidData.summary then
+                GameTooltip:AddLine(
+                    string.format("%s: %s", raidName, raidData.summary),
+                    0.8, 0.8, 1
+                )
+            end
+        end
+    end
+    
+    GameTooltip:Show()
+end
+
+function RecruitmentFrame:GetKeystoneLevelColor(level)
+    if level >= 15 then
+        return {r = 1, g = 0.5, b = 0} -- Orange for high keys
+    elseif level >= 10 then
+        return {r = 0.64, g = 0.21, b = 0.93} -- Purple for medium keys  
+    else
+        return {r = 0.2, g = 1, b = 0.2} -- Green for lower keys
+    end
+end
+
+-- Also add a debug command to test with specific players
+SLASH_FGRRIOTEST1 = "/riotest"
+SlashCmdList["FGRRIOTEST"] = function(msg)
+    local playerName = msg ~= "" and msg or UnitName("player")
+    
+    -- print("|cFF00FFFF[FGR-DEBUG]|r Testing RaiderIO integration for: " .. playerName)
+    
+    -- Simulate tooltip setup
+    GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+    GameTooltip:ClearLines()
+    GameTooltip:SetText(playerName, 1, 1, 1)
+    GameTooltip.unit = playerName
+    
+    RecruitmentFrame:EnhanceTooltipWithRaiderIO({name = playerName}, playerName)
+    
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Test tooltip - close with ESC", 0.7, 0.7, 0.7)
+    GameTooltip:Show()
+end
+
+-- Alternative: Try hooking into RaiderIO's own tooltip system
+function RecruitmentFrame:SetupRaiderIOHooks()
+    local RaiderIO = self:GetRaiderIOReference()
+    if not RaiderIO then return end
+    
+    -- Look for RaiderIO's tooltip enhancement functions
+    if RaiderIO.modules and RaiderIO.modules.tooltip then
+        local tooltipModule = RaiderIO.modules.tooltip
+        if tooltipModule.AddTooltipInfo then
+            -- print("|cFF00FFFF[FGR-DEBUG]|r Found RaiderIO tooltip module")
+            
+            -- We could potentially hook this or call it directly
+            local originalAddInfo = tooltipModule.AddTooltipInfo
+            tooltipModule.AddTooltipInfo = function(tooltip, unit, ...)
+                local result = originalAddInfo(tooltip, unit, ...)
+                if tooltip == GameTooltip then
+                    -- print("|cFF00FFFF[FGR-DEBUG]|r RaiderIO added tooltip info for: " .. tostring(unit))
+                end
+                return result
+            end
+        end
+    end
 end
 
 function RecruitmentFrame:ProcessInviteQueue(inviteQueue)
@@ -985,21 +2014,21 @@ function RecruitmentFrame:ProcessInviteQueue(inviteQueue)
     if self.inviteMode == "invite_only" then
         GuildInvite(player.name)
         self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
-        print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. player.name)
+        -- print("|cFF3EB9D8[FGR]|r Sent guild invite to: " .. player.name)
     elseif self.inviteMode == "invite_and_message" then
         GuildInvite(player.name)
         self.sessionStats.invitesSent = (self.sessionStats.invitesSent or 0) + 1
         if self.selectedMessage and self.selectedMessage.message then
             local message = self:FormatMessage(self.selectedMessage.message, player.name)
             SendChatMessage(message, "WHISPER", nil, player.name)
-            print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. player.name)
+            -- print("|cFF3EB9D8[FGR]|r Sent guild invite and message to: " .. player.name)
         end
     elseif self.inviteMode == "just_message" then
         if self.selectedMessage and self.selectedMessage.message then
             local message = self:FormatMessage(self.selectedMessage.message, player.name)
             SendChatMessage(message, "WHISPER", nil, player.name)
             self.sessionStats.messagesOnly = (self.sessionStats.messagesOnly or 0) + 1
-            print("|cFF3EB9D8[FGR]|r Sent message to: " .. player.name)
+            -- print("|cFF3EB9D8[FGR]|r Sent message to: " .. player.name)
         end
     end
 
@@ -1047,8 +2076,8 @@ function RecruitmentFrame:FormatMessage(message, playerName)
         end
     end
     formattedMessage = formattedMessage:gsub("GUILDLINK", guildLink)
-    print("|cFF3EB9D8[FGR-DEBUG]|r Formatted message: " .. formattedMessage)
-    print("|cFF3EB9D8[FGR-DEBUG]|r Guild link used: " .. guildLink)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Formatted message: " .. formattedMessage)
+    -- print("|cFF3EB9D8[FGR-DEBUG]|r Guild link used: " .. guildLink)
     return formattedMessage
 end
 
@@ -1074,7 +2103,7 @@ function RecruitmentFrame:EnsureGuildLink()
             local guildLink = "|cffffd200|HclubFinder:" .. club.clubFinderGUID .. "|h[" .. club.name .. "]|h|r"
             ns.guildInfo.guildLink = guildLink
             ns.guild.info.guildLink = guildLink
-            print("|cFF3EB9D8[FGR]|r Guild link created: " .. guildLink)
+            -- print("|cFF3EB9D8[FGR]|r Guild link created: " .. guildLink)
         else
             C_Timer.After(2, function()
                 self:EnsureGuildLink()
@@ -1180,11 +2209,11 @@ function RecruitmentFrame:StartCooldownTimer()
                 if nextIndex <= #self.selectedClassList then
                     local nextClass = self.selectedClassList[nextIndex]
                     self.scanButton:SetText("Next: " .. nextClass .. " (" .. nextIndex .. "/" .. #self.selectedClassList .. ")")
-                    print("|cFF3EB9D8[FGR]|r Ready for next class: " .. nextClass .. " (click to continue)")
+                    -- print("|cFF3EB9D8[FGR]|r Ready for next class: " .. nextClass .. " (click to continue)")
                 else
                     self.scanButton:SetText("Scan for Players")
                     self:ResetClassScanMode()
-                    print("|cFF3EB9D8[FGR]|r All classes completed")
+                    -- print("|cFF3EB9D8[FGR]|r All classes completed")
                 end
             else
                 self.scanButton:SetText("Scan for Players")
@@ -1200,7 +2229,7 @@ function RecruitmentFrame:ResetClassScanMode()
     self.currentClassIndex = 1
     self.selectedClassList = {}
     self.currentScanClass = nil
-    print("|cFF3EB9D8[FGR]|r Class scan mode reset")
+    -- print("|cFF3EB9D8[FGR]|r Class scan mode reset")
 end
 
 function RecruitmentFrame:RefreshUI()
@@ -1300,7 +2329,10 @@ function RecruitmentFrame:Initialize()
         ns.guild.data.messageList = {}
     end
     self:EnsureGuildLink()
-    print("[FGR] RecruitmentFrame module initialized")
+      C_Timer.After(3, function()
+        self:SetupRaiderIOHooks()
+    end)
+    -- print("[FGR] RecruitmentFrame module initialized")
 end
 
 function RecruitmentFrame:SelectAllPlayersButton()

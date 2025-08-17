@@ -36,11 +36,12 @@ Utils\Migration.lua
 # Data Sources (loaded after utilities)
 Data\DataSources.lua
 
-# Core (loaded after utilities) - NOTE: SlashCommands moved to after UI modules
+# Core (loaded after utilities) 
 Core\EventManager.lua
 Core\Database.lua
 
 # Modules - Core functionality
+Modules\UI\WindowManager.lua
 Modules\Invites\MessageTemplates.lua
 Modules\Invites\InviteManager.lua
 Modules\Lists\BlacklistManager.lua

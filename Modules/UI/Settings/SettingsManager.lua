@@ -25,6 +25,26 @@ function SettingsManager:Initialize()
     
     self:CreateTabbedSettingsFrame()
     
+    -- Register with WindowManager immediately after frame creation
+    if ns.WindowManager and self.settingsFrame then
+        ns.WindowManager:RegisterWindow(
+            "settings",
+            self.settingsFrame,
+            function() 
+                self.settingsFrame:Show()
+                -- Reload the current tab content since it was cleaned up when closed
+                if self.currentTab then
+                    self:ShowTab(self.currentTab)
+                else
+                    self:ShowTab("general")
+                end
+            end,
+            function() 
+                self:CleanupAndHide()
+            end
+        )
+    end
+    
     self.isInitialized = true
     print("|cFF3EB9D8[FGR]|r Enhanced settings initialized")
 end
@@ -401,8 +421,11 @@ function SettingsManager:CreateGeneralTab(parent)
     mainWindowBtn:SetSize(120, 25)
     mainWindowBtn:SetText("Main Window")
     mainWindowBtn:SetScript("OnClick", function()
-        if ns.UI and ns.UI.MainFrame then
-            ns.UI.MainFrame:Show()
+        -- Use WindowManager to show recruitment window
+        if ns.WindowManager then
+            ns.WindowManager:ShowWindow("recruitment")
+        elseif ns.RecruitmentFrame then
+            ns.RecruitmentFrame:Show()
         end
     end)
 
@@ -434,11 +457,9 @@ function SettingsManager:CreateRecruitmentTab(parent)
     minLevelInput:SetNumeric(true)
     minLevelInput:SetText(tostring((ns.pSettings and ns.pSettings.minLevel) or 1))
     minLevelInput:SetScript("OnEnterPressed", function(self)
-        if not ns.pSettings then ns.pSettings = {} end
         local value = tonumber(self:GetText()) or 1
         if value < 1 then value = 1 end
         if value > GetMaxPlayerLevel() then value = GetMaxPlayerLevel() end
-        ns.pSettings.minLevel = value
         self:SetText(tostring(value))
         self:ClearFocus()
         print("|cFF3EB9D8[FGR]|r Minimum level set to: " .. value)
@@ -446,7 +467,15 @@ function SettingsManager:CreateRecruitmentTab(parent)
         if ns.RecruitmentFrame and ns.RecruitmentFrame.RefreshFromSettings then
             ns.RecruitmentFrame:RefreshFromSettings()
         end
+    end)
+    minLevelInput:SetScript("OnTextChanged", function(self)
+        if not ns.pSettings then ns.pSettings = {} end
+        local value = tonumber(self:GetText()) or 1
+        if value < 1 then value = 1 end
+        if value > GetMaxPlayerLevel() then value = GetMaxPlayerLevel() end
+        ns.pSettings.minLevel = value
         
+        -- Force save
         if ns.Database and ns.Database.SaveData then
             ns.Database:SaveData()
         end
@@ -462,11 +491,9 @@ function SettingsManager:CreateRecruitmentTab(parent)
     maxLevelInput:SetNumeric(true)
     maxLevelInput:SetText(tostring((ns.pSettings and ns.pSettings.maxLevel) or GetMaxPlayerLevel()))
     maxLevelInput:SetScript("OnEnterPressed", function(self)
-        if not ns.pSettings then ns.pSettings = {} end
         local value = tonumber(self:GetText()) or GetMaxPlayerLevel()
         if value < 1 then value = 1 end
         if value > GetMaxPlayerLevel() then value = GetMaxPlayerLevel() end
-        ns.pSettings.maxLevel = value
         self:SetText(tostring(value))
         self:ClearFocus()
         print("|cFF3EB9D8[FGR]|r Maximum level set to: " .. value)
@@ -474,7 +501,15 @@ function SettingsManager:CreateRecruitmentTab(parent)
         if ns.RecruitmentFrame and ns.RecruitmentFrame.RefreshFromSettings then
             ns.RecruitmentFrame:RefreshFromSettings()
         end
+    end)
+    maxLevelInput:SetScript("OnTextChanged", function(self)
+        if not ns.pSettings then ns.pSettings = {} end
+        local value = tonumber(self:GetText()) or GetMaxPlayerLevel()
+        if value < 1 then value = 1 end
+        if value > GetMaxPlayerLevel() then value = GetMaxPlayerLevel() end
+        ns.pSettings.maxLevel = value
         
+        -- Force save
         if ns.Database and ns.Database.SaveData then
             ns.Database:SaveData()
         end
@@ -571,6 +606,7 @@ function SettingsManager:CreateRecruitmentTab(parent)
                 ns.RecruitmentFrame:RefreshFromSettings()
             end
             
+            -- IMMEDIATE SAVE  
             if ns.Database and ns.Database.SaveData then
                 ns.Database:SaveData()
             end
@@ -592,6 +628,7 @@ function SettingsManager:CreateRecruitmentTab(parent)
             ns.RecruitmentFrame:RefreshFromSettings()
         end
         
+        -- IMMEDIATE SAVE
         if ns.Database and ns.Database.SaveData then
             ns.Database:SaveData()
         end
@@ -652,26 +689,6 @@ function SettingsManager:CreateRecruitmentTab(parent)
 
     yOffset = yOffset - 60
 
-    -- Block Guild Invites
-    local blockInvitesLabel = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    blockInvitesLabel:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset)
-    blockInvitesLabel:SetText("• Block Guild Invites Check:")
-    
-    local blockInvitesCheck = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
-    blockInvitesCheck:SetPoint("LEFT", blockInvitesLabel, "RIGHT", 10, 0)
-    blockInvitesCheck.Text:SetText("Respect 'Block Guild Invites' setting")
-    blockInvitesCheck:SetChecked((ns.gSettings and ns.gSettings.obeyBlockInvites) or true)
-    blockInvitesCheck:SetScript("OnClick", function(self)
-        if not ns.gSettings then ns.gSettings = {} end
-        ns.gSettings.obeyBlockInvites = self:GetChecked()
-        print("|cFF3EB9D8[FGR]|r Block Invites Check: " .. (ns.gSettings.obeyBlockInvites and "ON" or "OFF"))
-        
-        if ns.Database and ns.Database.SaveData then
-            ns.Database:SaveData()
-        end
-    end)
-    yOffset = yOffset - 30
-    
     -- Anti-Spam Enable
     local antiSpamLabel = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     antiSpamLabel:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset)
@@ -865,6 +882,25 @@ function SettingsManager:CreateRecruitmentTab(parent)
                         "• |cFFFFFF00GUILDLINK|r - Replaced with guild link (retail only)")
     instructions:SetJustifyH("LEFT")
     instructions:SetWidth(500)
+
+    yOffset = yOffset - 60
+    local saveChangesBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    saveChangesBtn:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset)
+    saveChangesBtn:SetSize(120, 30)
+    saveChangesBtn:SetText("Save Changes")
+    saveChangesBtn:SetScript("OnClick", function()
+        -- Force save all recruitment settings
+        if ns.Database and ns.Database.SaveData then
+            local success = ns.Database:SaveData()
+            if success then
+                print("|cFF3EB9D8[FGR]|r Recruitment settings saved!")
+            else
+                print("|cFFFF0000[FGR]|r Failed to save settings!")
+            end
+        else
+            print("|cFFFF0000[FGR]|r Database not available!")
+        end
+    end)
 end
 
 function SettingsManager:CreateMessagesTab(parent)
@@ -1702,26 +1738,22 @@ function SettingsManager:OpenSettings()
         self:Initialize()
     end
     
-    if self.settingsFrame then
-        if self.settingsFrame:IsShown() then
-            -- Clean up content before hiding
-            self:CleanupAndHide()
-        else
-            -- Show the frame
-            self.settingsFrame:Show()
-            
-            -- Reload the current tab content since it was cleaned up when closed
-            if self.currentTab then
-                self:ShowTab(self.currentTab)
+    -- Use WindowManager to show this window (and close others)
+    if ns.WindowManager then
+        ns.WindowManager:ShowWindow("settings")
+    else
+        -- Fallback if WindowManager not available
+        if self.settingsFrame then
+            if self.settingsFrame:IsShown() then
+                self:CleanupAndHide()
             else
-                -- Default to general tab if no current tab is set
-                self:ShowTab("general")
+                self.settingsFrame:Show()
+                if self.currentTab then
+                    self:ShowTab(self.currentTab)
+                else
+                    self:ShowTab("general")
+                end
             end
         end
-        print("|cFF3EB9D8[FGR]|r Settings window toggled")
-    else
-        print("|cFFFF0000[FGR]|r Failed to create settings frame")
     end
 end
-
--- Initialize when needed

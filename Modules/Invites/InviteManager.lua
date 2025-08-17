@@ -265,6 +265,7 @@ function InviteManager:IsBlacklisted(playerName)
 end
 
 function InviteManager:IsAntiSpamBlocked(playerName)
+    if not ns.gSettings.antiSpam then return false end
     if not ns.tblAntiSpamList then return false end
     local key = string.lower(playerName)
     local entry = ns.tblAntiSpamList[key]
