@@ -149,10 +149,10 @@ function RecruitmentFrame:HandleWhoQueryFailure(reason)
                 local nextClass = self.selectedClassList[nextIndex]
                 self.scanButton:SetText("Next: " .. nextClass)
             else
-                self.scanButton:SetText("Scan for Players")
+                self.scanButton:SetText("Scan")
             end
         else
-            self.scanButton:SetText("Scan for Players")
+            self.scanButton:SetText("Scan")
         end
     end
 end
@@ -166,11 +166,11 @@ function RecruitmentFrame:ReEnableScanButton()
                 local nextClass = self.selectedClassList[nextIndex]
                 self.scanButton:SetText("Next: " .. nextClass)
             else
-                self.scanButton:SetText("Scan for Players")
+                self.scanButton:SetText("Scan")
                 self:ResetClassScanMode()
             end
         else
-            self.scanButton:SetText("Scan for Players")
+            self.scanButton:SetText("Scan")
         end
     end
     self:StartCooldownTimer()
@@ -208,31 +208,32 @@ function RecruitmentFrame:Show()
         self:CreateFrame()
     end
     
-    -- Use WindowManager to show this window (and close others)
-    if ns.WindowManager then
-        ns.WindowManager:ShowWindow("recruitment")
-    else
-        -- Fallback
-        if self.frame then
-            self.frame:Show()
-            self:RefreshUI()
-        end
+    -- Skip WindowManager for now - use direct approach
+    if self.frame then
+        self.frame:Show()
+        self:RefreshUI()
+        print("[FGR] Recruitment frame shown directly")
     end
 end
 
 function RecruitmentFrame:Hide()
-    if ns.WindowManager then
-        ns.WindowManager:HideWindow("recruitment")
-    else
-        if self.frame then
-            self.frame:Hide()
-        end
+    if self.frame then
+        self.frame:Hide()
+        print("[FGR] Recruitment frame hidden directly")
     end
 end
 
 function RecruitmentFrame:CreateFrame()
+    local isCompact = self.compactMode or (ns.pSettings and ns.pSettings.isCompact) or false
+    
     local frame = CreateFrame("Frame", "FGRRecruitmentFrame", UIParent, "BasicFrameTemplateWithInset")
-    frame:SetSize(800, 600)
+    
+    if isCompact then
+        frame:SetSize(350, 250)
+    else
+        frame:SetSize(800, 600)
+    end
+    
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:SetMovable(true)
     frame:EnableMouse(true)
@@ -243,11 +244,10 @@ function RecruitmentFrame:CreateFrame()
     
     -- Title
     frame.title = frame:CreateFontString(nil, "OVERLAY")
-    frame.title:SetFontObject("GameFontHighlight")
+    frame.title:SetFontObject(isCompact and "GameFontNormalSmall" or "GameFontHighlight")
     frame.title:SetPoint("LEFT", frame.TitleBg, "LEFT", 5, 0)
-    frame.title:SetText("Fast Guild Recruiter - Recruitment")
+    frame.title:SetText(isCompact and "FGR" or "Fast Guild Recruiter - Recruitment")
     
-    -- Close button
     if frame.CloseButton then
         frame.CloseButton:SetScript("OnClick", function()
             self:Hide()
@@ -255,107 +255,145 @@ function RecruitmentFrame:CreateFrame()
     end
     
     self.frame = frame
+    self.isCompactMode = isCompact
+    
     self:CreateScanSection()
     self:CreateFilterSection()
-    self:CreateMessageSection()
+    if not isCompact then
+        self:CreateMessageSection()
+    end
     self:CreatePlayerList()
     self:CreateActionButtons()
     self:CreateStatusSection()
     
-    -- Register with WindowManager after frame creation
-    if ns.WindowManager then
-        ns.WindowManager:RegisterWindow(
-            "recruitment",
-            self.frame,
-            function() 
-                self.frame:Show()
-                self:RefreshUI()
-            end,
-            function() 
-                self.frame:Hide()
-            end
-        )
-    end
-    
     self.isInitialized = true
-    -- print("[FGR] Recruitment frame created successfully")
 end
 
 function RecruitmentFrame:CreateScanSection()
     local frame = self.frame
-    local yOffset = -80
+    local isCompact = self.isCompactMode
+    local yOffset = isCompact and -30 or -80
 
-    local scanHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    scanHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset)
-    scanHeader:SetText("Player Scanning:")
-    scanHeader:SetTextColor(0.24, 0.73, 0.85)
-    yOffset = yOffset - 25
+    if isCompact then
+        -- Ultra-compact: Just scan button and basic info
+        local scanBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        scanBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, yOffset)
+        scanBtn:SetSize(80, 22)
+        scanBtn:SetText("Scan")
+        scanBtn:SetScript("OnClick", function()
+            self:StartPlayerScan()
+        end)
+        self.scanButton = scanBtn
 
-    -- Scan button
-    local scanBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    scanBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset)
-    scanBtn:SetSize(120, 30)
-    scanBtn:SetText("Scan for Players")
-    scanBtn:SetScript("OnClick", function()
-        self:StartPlayerScan()
-    end)
-    self.scanButton = scanBtn
+        -- Cooldown text right next to button
+        local cooldownText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        cooldownText:SetPoint("LEFT", scanBtn, "RIGHT", 8, 0)
+        cooldownText:SetText("")
+        cooldownText:SetTextColor(1, 0.5, 0)
+        self.cooldownText = cooldownText
+        
+    else
+        -- Normal mode (keep existing)
+        local scanHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        scanHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, yOffset)
+        scanHeader:SetText("Scanning:")
+        scanHeader:SetTextColor(0.24, 0.73, 0.85)
+        yOffset = yOffset - 25
 
-    -- Cooldown timer
-    local cooldownText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    cooldownText:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset - 35)
-    cooldownText:SetText("")
-    cooldownText:SetTextColor(1, 0.5, 0)
-    self.cooldownText = cooldownText
+        local scanBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        scanBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, yOffset)
+        scanBtn:SetSize(120, 30)
+        scanBtn:SetText("Scan")
+        scanBtn:SetScript("OnClick", function()
+            self:StartPlayerScan()
+        end)
+        self.scanButton = scanBtn
+
+        local cooldownText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        cooldownText:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset - 35)
+        cooldownText:SetText("")
+        cooldownText:SetTextColor(1, 0.5, 0)
+        self.cooldownText = cooldownText
+    end
 end
 
 function RecruitmentFrame:CreateFilterSection()
     local frame = self.frame
-    local yOffset = -160
+    local isCompact = self.isCompactMode
+    local yOffset = isCompact and -55 or -160
 
-    -- Filters header, left-aligned on its own line
-    local filterHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    filterHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset)
-    filterHeader:SetText("Filters:")
-    filterHeader:SetTextColor(0.24, 0.73, 0.85)
+    if isCompact then
+        -- Ultra-compact: Horizontal layout for filters
+        
+        -- Level display (no label, just numbers)
+        local levelDisplay = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        levelDisplay:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, yOffset)
+        levelDisplay:SetTextColor(0.8, 0.8, 1)
+        self.levelDisplay = levelDisplay
+        
+        -- Class filter checkbox - smaller and to the right
+        local classFilterCheck = CreateFrame("CheckButton", nil, frame, "InterfaceOptionsCheckButtonTemplate")
+        classFilterCheck:SetPoint("LEFT", levelDisplay, "RIGHT", 15, 0)
+        classFilterCheck:SetScale(0.7)
+        classFilterCheck.Text:SetText("Class")
+        classFilterCheck:SetChecked((ns.pSettings and ns.pSettings.enableClassFilter) or false)
+        classFilterCheck:SetScript("OnClick", function(self)
+            if not ns.pSettings then ns.pSettings = {} end
+            ns.pSettings.enableClassFilter = self:GetChecked()
+            RecruitmentFrame:UpdateClassFilterDisplay()
+        end)
+        self.classFilterCheck = classFilterCheck
+        
+        -- Class filter info - below level display
+        local classFilterInfo = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        classFilterInfo:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, yOffset - 15)
+        classFilterInfo:SetWidth(300)
+        classFilterInfo:SetTextColor(0.8, 0.8, 1)
+        self.classFilterInfo = classFilterInfo
+        
+        -- Hide zone filter in ultra-compact mode to save space
+        self.zoneFilterCheck = nil
+    else
+        -- Normal mode (keep your existing filter section)
+        local filterHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        filterHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, yOffset)
+        filterHeader:SetText("Filters:")
+        filterHeader:SetTextColor(0.24, 0.73, 0.85)
 
-    -- Level range label, range, settings on own row
-    yOffset = yOffset - 25
-    local levelLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    levelLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 34, yOffset)
-    levelLabel:SetText("Level Range:")
+        yOffset = yOffset - 25
+        local levelLabel = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        levelLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 34, yOffset)
+        levelLabel:SetText("Level Range:")
 
-    local levelDisplay = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    levelDisplay:SetPoint("LEFT", levelLabel, "RIGHT", 6, 0)
-    levelDisplay:SetTextColor(0.8, 0.8, 1)
-    self.levelDisplay = levelDisplay
+        local levelDisplay = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        levelDisplay:SetPoint("LEFT", levelLabel, "RIGHT", 4, 0)
+        levelDisplay:SetTextColor(0.8, 0.8, 1)
+        self.levelDisplay = levelDisplay
 
-    -- Next row: checkboxes column
-    yOffset = yOffset - 24
-    local zoneFilterCheck = CreateFrame("CheckButton", nil, frame, "InterfaceOptionsCheckButtonTemplate")
-    zoneFilterCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 34, yOffset)
-    zoneFilterCheck.Text:SetText("Exclude invalid zones")
-    zoneFilterCheck:SetChecked(true)
-    self.zoneFilterCheck = zoneFilterCheck
+        yOffset = yOffset - 24
+        local zoneFilterCheck = CreateFrame("CheckButton", nil, frame, "InterfaceOptionsCheckButtonTemplate")
+        zoneFilterCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 34, yOffset)
+        zoneFilterCheck.Text:SetText("Exclude invalid zones")
+        zoneFilterCheck:SetChecked(true)
+        self.zoneFilterCheck = zoneFilterCheck
 
-    yOffset = yOffset - 24
-    -- Class filter
-    local classFilterCheck = CreateFrame("CheckButton", nil, frame, "InterfaceOptionsCheckButtonTemplate")
-    classFilterCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 34, yOffset)
-    classFilterCheck.Text:SetText("Enable class filter")
-    classFilterCheck:SetChecked((ns.pSettings and ns.pSettings.enableClassFilter) or false)
-    classFilterCheck:SetScript("OnClick", function(self)
-        if not ns.pSettings then ns.pSettings = {} end
-        ns.pSettings.enableClassFilter = self:GetChecked()
-        -- print("|cFF3EB9D8[FGR]|r Class filter: " .. (ns.pSettings.enableClassFilter and "ON" or "OFF"))
-    end)
-    self.classFilterCheck = classFilterCheck
+        yOffset = yOffset - 24
+        local classFilterCheck = CreateFrame("CheckButton", nil, frame, "InterfaceOptionsCheckButtonTemplate")
+        classFilterCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 34, yOffset)
+        classFilterCheck.Text:SetText("Enable class filter")
+        classFilterCheck:SetChecked((ns.pSettings and ns.pSettings.enableClassFilter) or false)
+        classFilterCheck:SetScript("OnClick", function(self)
+            if not ns.pSettings then ns.pSettings = {} end
+            ns.pSettings.enableClassFilter = self:GetChecked()
+            RecruitmentFrame:UpdateClassFilterDisplay()
+        end)
+        self.classFilterCheck = classFilterCheck
 
-    -- Class filter info, to the right of the last checkbox
-    local classFilterInfo = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    classFilterInfo:SetPoint("LEFT", classFilterCheck.Text, "RIGHT", 10, 0)
-    classFilterInfo:SetTextColor(0.8, 0.8, 1)
-    self.classFilterInfo = classFilterInfo
+        local classFilterInfo = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        classFilterInfo:SetPoint("LEFT", classFilterCheck.Text, "RIGHT", 10, 0)
+        classFilterInfo:SetTextColor(0.8, 0.8, 1)
+        self.classFilterInfo = classFilterInfo
+    end
 
     self:UpdateClassFilterDisplay()
     self:UpdateLevelDisplay()
@@ -363,33 +401,50 @@ end
 
 function RecruitmentFrame:UpdateClassFilterDisplay()
     if not self.classFilterInfo then return end
-
+    
     if not ns.pSettings or not ns.pSettings.enableClassFilter or not ns.pSettings.classFilter then
-        self.classFilterInfo:SetText("(All classes)")
+        self.classFilterInfo:SetText(self.isCompactMode and "(All)" or "(All classes)")
+        self.classFilterInfo:SetTextColor(0.8, 0.8, 1)
         return
     end
-
+    
     local selectedClasses = {}
     for className, enabled in pairs(ns.pSettings.classFilter) do
         if enabled then
             table.insert(selectedClasses, className)
         end
     end
-
+    
     if #selectedClasses == 0 then
-        self.classFilterInfo:SetText("(No classes selected)")
+        self.classFilterInfo:SetText(self.isCompactMode and "(None)" or "(No classes selected)")
         self.classFilterInfo:SetTextColor(1, 0.5, 0.5)
     else
         local displayText = ""
-        if self.isClassScanMode and self.currentClassIndex <= #self.selectedClassList then
-            displayText = "(" .. self.currentClassIndex .. "/" .. #selectedClasses .. ": " .. 
-                         (self.selectedClassList[self.currentClassIndex] or "Unknown") .. ")"
+        if self.isClassScanMode and self.currentClassIndex and self.selectedClassList and 
+           self.currentClassIndex <= #self.selectedClassList then
+            -- Show current progress
+            if self.isCompactMode then
+                displayText = self.currentClassIndex .. "/" .. #selectedClasses .. ": " .. 
+                             (self.selectedClassList[self.currentClassIndex] or "?")
+            else
+                displayText = "(" .. self.currentClassIndex .. "/" .. #selectedClasses .. ": " .. 
+                             (self.selectedClassList[self.currentClassIndex] or "Unknown") .. ")"
+            end
+        elseif #selectedClasses > 3 and self.isCompactMode then
+            displayText = #selectedClasses .. " classes"
         elseif #selectedClasses > 5 then
             displayText = "(" .. #selectedClasses .. " classes selected)"
         else
-            displayText = "(" .. table.concat(selectedClasses, ", ") .. ")"
+            local shortNames = self.isCompactMode and {} or selectedClasses
+            if self.isCompactMode then
+                for _, class in ipairs(selectedClasses) do
+                    table.insert(shortNames, string.sub(class, 1, 4)) -- First 4 chars
+                end
+            end
+            local classList = self.isCompactMode and shortNames or selectedClasses
+            displayText = self.isCompactMode and table.concat(classList, ",") or ("(" .. table.concat(classList, ", ") .. ")")
         end
-
+        
         self.classFilterInfo:SetText(displayText)
         self.classFilterInfo:SetTextColor(0.8, 0.8, 1)
     end
@@ -521,41 +576,81 @@ end
 
 function RecruitmentFrame:CreatePlayerList()
     local frame = self.frame
-    local yOffset = -280
-
-    local listHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    listHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset)
-    listHeader:SetText("Found Players: 0")
-    listHeader:SetTextColor(0.24, 0.73, 0.85)
-    self.listHeader = listHeader
-
-    local selectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    selectAllBtn:SetPoint("LEFT", listHeader, "RIGHT", 20, 0)
-    selectAllBtn:SetSize(90, 22)
-    selectAllBtn:SetText("Select All")
-    selectAllBtn:SetScript("OnClick", function()
-        RecruitmentFrame:SelectAllPlayersButton()
-    end)
-    self.selectAllBtn = selectAllBtn
-
-    local deselectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    deselectAllBtn:SetPoint("LEFT", selectAllBtn, "RIGHT", 5, 0)
-    deselectAllBtn:SetSize(90, 22)
-    deselectAllBtn:SetText("Deselect All")
-    deselectAllBtn:SetScript("OnClick", function()
-        RecruitmentFrame:DeselectAllPlayersButton()
-    end)
-    self.deselectAllBtn = deselectAllBtn
+    local isCompact = self.isCompactMode
+    local yOffset = isCompact and -95 or -280
 
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame)
-    scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, yOffset - 30)
-    scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -40, 80)
+
+    if isCompact then
+        -- Ultra-compact: Minimal header and buttons
+        local listHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        listHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, yOffset)
+        listHeader:SetText("Players: 0")
+        listHeader:SetTextColor(0.24, 0.73, 0.85)
+        self.listHeader = listHeader
+
+        -- Tiny select buttons
+        local selectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        selectAllBtn:SetPoint("LEFT", listHeader, "RIGHT", 10, 0)
+        selectAllBtn:SetSize(35, 16)
+        selectAllBtn:SetText("All")
+        selectAllBtn:SetScript("OnClick", function()
+            RecruitmentFrame:SelectAllPlayersButton()
+        end)
+        self.selectAllBtn = selectAllBtn
+
+        local deselectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        deselectAllBtn:SetPoint("LEFT", selectAllBtn, "RIGHT", 3, 0)
+        deselectAllBtn:SetSize(35, 16)
+        deselectAllBtn:SetText("None")
+        deselectAllBtn:SetScript("OnClick", function()
+            RecruitmentFrame:DeselectAllPlayersButton()
+        end)
+        self.deselectAllBtn = deselectAllBtn
+
+        -- Position scrollFrame for compact mode
+        scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, yOffset - 20)
+        scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -15, 35) -- Even more compact - less bottom space
+        
+    else
+        -- Normal mode
+        local listHeader = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        listHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, yOffset)
+        listHeader:SetText("Found Players: 0")
+        listHeader:SetTextColor(0.24, 0.73, 0.85)
+        self.listHeader = listHeader
+
+        local selectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        selectAllBtn:SetPoint("LEFT", listHeader, "RIGHT", 20, 0)
+        selectAllBtn:SetSize(90, 22)
+        selectAllBtn:SetText("Select All")
+        selectAllBtn:SetScript("OnClick", function()
+            RecruitmentFrame:SelectAllPlayersButton()
+        end)
+        self.selectAllBtn = selectAllBtn
+
+        local deselectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        deselectAllBtn:SetPoint("LEFT", selectAllBtn, "RIGHT", 5, 0)
+        deselectAllBtn:SetSize(90, 22)
+        deselectAllBtn:SetText("Deselect All")
+        deselectAllBtn:SetScript("OnClick", function()
+            RecruitmentFrame:DeselectAllPlayersButton()
+        end)
+        self.deselectAllBtn = deselectAllBtn
+
+        -- Position scrollFrame for normal mode
+        scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, yOffset - 25)
+        scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -40, 80)
+    end
+    
+    -- Now scrollFrame is in scope for both modes - set up background
     local scrollBg = scrollFrame:CreateTexture(nil, "BACKGROUND")
     scrollBg:SetAllPoints(scrollFrame)
-    scrollBg:SetColorTexture(0.1, 0.1, 0.1, 0.5)
+    scrollBg:SetColorTexture(0.08, 0.08, 0.12, 0.85)
+
     local scrollBorder = scrollFrame:CreateTexture(nil, "BORDER")
     scrollBorder:SetAllPoints(scrollFrame)
-    scrollBorder:SetColorTexture(0.5, 0.5, 0.5, 1)
+    scrollBorder:SetColorTexture(0.24, 0.73, 0.85, 0.4)
     scrollBg:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 1, -1)
     scrollBg:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -1, 1)
 
@@ -582,46 +677,94 @@ end
 
 function RecruitmentFrame:CreateActionButtons()
     local frame = self.frame
+    local isCompact = self.isCompactMode
 
-    local sendInviteBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    sendInviteBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 20)
-    sendInviteBtn:SetSize(120, 30)
-    sendInviteBtn:SetText("Send Invite")
-    sendInviteBtn:SetScript("OnClick", function()
-        self:SendNextInvite()
-    end)
-    sendInviteBtn:Hide()
-    self.sendInviteBtn = sendInviteBtn
+    if isCompact then
+        local buttonHeight = 18
+        local gap = 2
+        
+        local sendInviteBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        sendInviteBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
+        sendInviteBtn:SetSize(45, buttonHeight)
+        sendInviteBtn:SetText("Invite")
+        sendInviteBtn:SetScript("OnClick", function()
+            self:SendNextInvite()
+        end)
+        sendInviteBtn:Hide()
+        self.sendInviteBtn = sendInviteBtn
 
-    local blacklistBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    blacklistBtn:SetPoint("LEFT", sendInviteBtn, "RIGHT", 10, 0)
-    blacklistBtn:SetSize(120, 30)
-    blacklistBtn:SetText("Blacklist Selected")
-    blacklistBtn:SetScript("OnClick", function()
-        self:BlacklistSelectedPlayers()
-    end)
-    blacklistBtn:Hide()
-    self.blacklistBtn = blacklistBtn
+        local blacklistBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        blacklistBtn:SetPoint("LEFT", sendInviteBtn, "RIGHT", gap, 0)
+        blacklistBtn:SetSize(40, buttonHeight)
+        blacklistBtn:SetText("Block")
+        blacklistBtn:SetScript("OnClick", function()
+            self:BlacklistSelectedPlayers()
+        end)
+        blacklistBtn:Hide()
+        self.blacklistBtn = blacklistBtn
 
-    local clearBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    clearBtn:SetPoint("LEFT", blacklistBtn, "RIGHT", 10, 0)
-    clearBtn:SetSize(80, 30)
-    clearBtn:SetText("Clear List")
-    clearBtn:SetScript("OnClick", function()
-        self:ClearPlayerList()
-    end)
-    clearBtn:Hide()
-    self.clearBtn = clearBtn
+        local clearBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        clearBtn:SetPoint("LEFT", blacklistBtn, "RIGHT", gap, 0)
+        clearBtn:SetSize(35, buttonHeight)
+        clearBtn:SetText("Clear")
+        clearBtn:SetScript("OnClick", function()
+            self:ClearPlayerList()
+        end)
+        clearBtn:Hide()
+        self.clearBtn = clearBtn
 
-    local settingsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    settingsBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 20)
-    settingsBtn:SetSize(80, 30)
-    settingsBtn:SetText("Settings")
-    settingsBtn:SetScript("OnClick", function()
-        if ns.SettingsManager then
-            ns.SettingsManager:OpenSettings()
-        end
-    end)
+        local settingsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        settingsBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+        settingsBtn:SetSize(40, buttonHeight)
+        settingsBtn:SetText("⚙️") -- Just gear emoji
+        settingsBtn:SetScript("OnClick", function()
+            if ns.SettingsManager then
+                ns.SettingsManager:OpenSettings()
+            end
+        end)
+        
+    else
+        -- Normal mode (keep existing larger buttons)
+        local sendInviteBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        sendInviteBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 15, 20)
+        sendInviteBtn:SetSize(120, 30)
+        sendInviteBtn:SetText("Send Invite")
+        sendInviteBtn:SetScript("OnClick", function()
+            self:SendNextInvite()
+        end)
+        sendInviteBtn:Hide()
+        self.sendInviteBtn = sendInviteBtn
+
+        local blacklistBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        blacklistBtn:SetPoint("LEFT", sendInviteBtn, "RIGHT", 10, 0)
+        blacklistBtn:SetSize(120, 30)
+        blacklistBtn:SetText("Blacklist Selected")
+        blacklistBtn:SetScript("OnClick", function()
+            self:BlacklistSelectedPlayers()
+        end)
+        blacklistBtn:Hide()
+        self.blacklistBtn = blacklistBtn
+
+        local clearBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        clearBtn:SetPoint("LEFT", blacklistBtn, "RIGHT", 10, 0)
+        clearBtn:SetSize(80, 30)
+        clearBtn:SetText("Clear")
+        clearBtn:SetScript("OnClick", function()
+            self:ClearPlayerList()
+        end)
+        clearBtn:Hide()
+        self.clearBtn = clearBtn
+
+        local settingsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        settingsBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -15, 20)
+        settingsBtn:SetSize(80, 30)
+        settingsBtn:SetText("Settings")
+        settingsBtn:SetScript("OnClick", function()
+            if ns.SettingsManager then
+                ns.SettingsManager:OpenSettings()
+            end
+        end)
+    end
 end
 
 function RecruitmentFrame:UpdateActionButtonVisibility()
@@ -724,16 +867,33 @@ end
 
 function RecruitmentFrame:CreateStatusSection()
     local frame = self.frame
-    local statusText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    statusText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 50)
-    statusText:SetText("Ready")
-    statusText:SetTextColor(0, 1, 0)
-    self.statusText = statusText
-    local statsText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    statsText:SetPoint("BOTTOM", statusText, "TOP", 0, 5)
-    statsText:SetText("Session: 0 invites sent | 0 players scanned")
-    statsText:SetTextColor(0.7, 0.7, 0.7)
-    self.statsText = statsText
+    local isCompact = self.isCompactMode
+    
+    if isCompact then
+        -- Ultra-compact: Just status, no stats
+        local statusText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        statusText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 32)
+        statusText:SetText("Ready")
+        statusText:SetTextColor(0, 1, 0)
+        self.statusText = statusText
+        
+        -- No stats in ultra-compact mode
+        self.statsText = nil
+        
+    else
+        -- Normal mode (keep existing)
+        local statusText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        statusText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 50)
+        statusText:SetText("Ready")
+        statusText:SetTextColor(0, 1, 0)
+        self.statusText = statusText
+        
+        local statsText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        statsText:SetPoint("BOTTOM", statusText, "TOP", 0, 5)
+        statsText:SetText("Session: 0 invites sent | 0 players scanned")
+        statsText:SetTextColor(0.7, 0.7, 0.7)
+        self.statsText = statsText
+    end
 end
 
 function RecruitmentFrame:StartPlayerScan()
@@ -924,10 +1084,21 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
 
     local bg = entry:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(entry)
-    bg:SetColorTexture(0.2, 0.2, 0.2, 0.3)
+
+    local rowIndex = math.abs(yOffset / 27)
+    if (rowIndex % 2) == 0 then
+        bg:SetColorTexture(0.12, 0.12, 0.16, 0.6) -- Slightly lighter
+    else
+        bg:SetColorTexture(0.08, 0.08, 0.12, 0.6) -- Slightly darker
+    end
+
+    local classBorder = entry:CreateTexture(nil, "OVERLAY")
+    classBorder:SetPoint("LEFT", entry, "LEFT", 0, 0)
+    classBorder:SetSize(2, 23)
+    classBorder:SetColorTexture(classColor.r, classColor.g, classColor.b, 0.7)
 
     local checkbox = CreateFrame("CheckButton", nil, entry, "InterfaceOptionsCheckButtonTemplate")
-    checkbox:SetPoint("LEFT", entry, "LEFT", 5, 0)
+    checkbox:SetPoint("LEFT", entry, "LEFT", 8, 0) 
     checkbox:SetSize(20, 20)
     checkbox:SetChecked(selectedPlayers[playerData.name] == playerData)
     checkbox:SetScript("OnClick", function(self)
@@ -943,7 +1114,7 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     playerCheckboxes[playerData.name] = checkbox
 
     local nameFrame = CreateFrame("Frame", nil, entry)
-    nameFrame:SetPoint("LEFT", entry, "LEFT", 5, 0)
+    nameFrame:SetPoint("LEFT", entry, "LEFT", 8, 0) 
     nameFrame:SetSize(150, 20)
     nameFrame:EnableMouse(true)
     
@@ -951,8 +1122,8 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     nameText:SetPoint("LEFT", nameFrame, "LEFT", 25, 0)
     nameText:SetText(playerData.name)
     nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
+    
     nameFrame:SetScript("OnMouseUp", function(self, button)
-        local classColor = RAID_CLASS_COLORS[playerData.class] or {r=1, g=1, b=1}
         nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
     end)
 
@@ -971,10 +1142,12 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     nameFrame:SetScript("OnMouseUp", function(self)
         nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
     end)
+    
     local levelText = entry:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     levelText:SetPoint("LEFT", nameText, "RIGHT", 20, 0)
     levelText:SetText("Level " .. playerData.level)
     levelText:SetTextColor(0.8, 0.8, 0.8)
+    
     local classText = entry:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     classText:SetPoint("LEFT", levelText, "RIGHT", 15, 0)
     classText:SetText(playerData.class)
@@ -984,7 +1157,6 @@ function RecruitmentFrame:CreatePlayerEntry(playerData, yOffset)
     return entry
 end
 
--- Remove any LibStub calls from the top of the file
 
 function RecruitmentFrame:GetRaiderIOReference()
     -- Try multiple ways to access RaiderIO
@@ -2208,12 +2380,12 @@ function RecruitmentFrame:StartCooldownTimer()
                     self.scanButton:SetText("Next: " .. nextClass .. " (" .. nextIndex .. "/" .. #self.selectedClassList .. ")")
                     -- print("|cFF3EB9D8[FGR]|r Ready for next class: " .. nextClass .. " (click to continue)")
                 else
-                    self.scanButton:SetText("Scan for Players")
+                    self.scanButton:SetText("Scan")
                     self:ResetClassScanMode()
                     -- print("|cFF3EB9D8[FGR]|r All classes completed")
                 end
             else
-                self.scanButton:SetText("Scan for Players")
+                self.scanButton:SetText("Scan")
             end
             self:UpdateClassFilterDisplay()
         end

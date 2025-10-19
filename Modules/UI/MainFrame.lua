@@ -21,7 +21,7 @@
         -- Create main frame
         frame = CreateFrame("Frame", "FGRMainFrame", UIParent, "BasicFrameTemplateWithInset")
         frame:SetSize(400, 500)
-        frame:SetPoint("CENTER")
+        frame:SetPoint("LEFT")
         frame:SetMovable(true)
         frame:EnableMouse(true)
         frame:RegisterForDrag("LeftButton")
@@ -61,7 +61,7 @@
         local content = frame.contentChild
         local yOffset = -10
         
-        -- Status section
+        -- Status section (keep existing code)
         local statusLabel = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         statusLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 10, yOffset)
         statusLabel:SetText("Addon Status")
@@ -96,58 +96,93 @@
         frame.updateStatus = updateStatus
         yOffset = yOffset - 120
         
-        -- RECRUITMENT BUTTON - ADD THIS HERE
+        -- RECRUITMENT SECTION
         local recruitmentLabel = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         recruitmentLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 10, yOffset)
         recruitmentLabel:SetText("Guild Recruitment")
         recruitmentLabel:SetTextColor(0.24, 0.73, 0.85)
         yOffset = yOffset - 30
         
-        -- Create the recruitment button
+        -- Regular recruitment button
         local recruitBtn = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
         recruitBtn:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
         recruitBtn:SetSize(200, 35)
-        recruitBtn:SetText("🔍 Recruit Players")
+        recruitBtn:SetText("Normal Mode")
         recruitBtn:SetScript("OnClick", function()
             print("[FGR] Opening recruitment window...")
             if ns.RecruitmentFrame then
+                if ns.pSettings then
+                    ns.pSettings.isCompact = false
+                end
+                ns.RecruitmentFrame.compactMode = false
                 ns.RecruitmentFrame:Show()
+                MainFrame:Hide()
             else
                 print("|cFFFF0000[FGR]|r Recruitment system not available")
             end
         end)
         
-        -- Tooltip for recruitment button
         recruitBtn:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText("Guild Recruitment", 1, 1, 1)
             GameTooltip:AddLine("Scan for and recruit new guild members", nil, nil, nil, true)
+            GameTooltip:AddLine("Full interface with all features", 0.7, 0.7, 0.7, true)
             GameTooltip:Show()
         end)
         recruitBtn:SetScript("OnLeave", function()
             GameTooltip:Hide()
         end)
         
+        local compactRecruitBtn = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+        compactRecruitBtn:SetPoint("LEFT", recruitBtn, "RIGHT", 10, 0) -- Place it to the right of the regular button
+        compactRecruitBtn:SetSize(180, 35)
+        compactRecruitBtn:SetText("Compact Mode")
+        compactRecruitBtn:SetScript("OnClick", function()
+            print("[FGR] Opening recruitment window in compact mode...")
+            if ns.RecruitmentFrame then
+                -- Set compact mode flag before showing
+                if ns.pSettings then
+                    ns.pSettings.isCompact = true
+                end
+                ns.RecruitmentFrame.compactMode = true
+                ns.RecruitmentFrame:Show()
+                MainFrame:Hide()
+            else
+                print("|cFFFF0000[FGR]|r Recruitment system not available")
+            end
+        end)
+        
+        -- Tooltip for compact recruitment button
+        compactRecruitBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Compact Recruitment", 0.8, 0.8, 1)
+            GameTooltip:AddLine("Streamlined interface for quick recruiting", nil, nil, nil, true)
+            GameTooltip:AddLine("Takes up less screen space", 0.7, 0.7, 0.7, true)
+            GameTooltip:Show()
+        end)
+        compactRecruitBtn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+        
         yOffset = yOffset - 50
         
-        -- Buttons section
+        -- Rest of your existing code (Buttons section, etc.)
         local buttonsLabel = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         buttonsLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 10, yOffset)
         buttonsLabel:SetText("Quick Actions")
         yOffset = yOffset - 30
         
-        -- Settings button
+        -- Settings button (keep existing)
         local settingsBtn = CreateFrame("Button", nil, content, "GameMenuButtonTemplate")
         settingsBtn:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
         settingsBtn:SetSize(120, 22)
         settingsBtn:SetText("Settings")
         settingsBtn:SetNormalFontObject("GameFontNormal")
         settingsBtn:SetScript("OnClick", function()
-            -- Use our SettingsManager directly
             if ns.SettingsManager and ns.SettingsManager.OpenSettings then
                 ns.SettingsManager:OpenSettings()
+                MainFrame:Hide()
             elseif Settings and Settings.OpenToCategory then
-                -- Try to open AddOns section as fallback
                 local success = pcall(Settings.OpenToCategory, "AddOns")
                 if success then
                     print("|cFFFFFF00[FGR]|r Opened AddOns settings. Look for Fast Guild Recruiter.")
@@ -161,7 +196,6 @@
 
         yOffset = yOffset - 35
 
-        -- Help section
         local helpLabel = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         helpLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 10, yOffset)
         helpLabel:SetText("Commands")
@@ -231,11 +265,11 @@
         local recruitBtn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
         recruitBtn:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset or -100)
         recruitBtn:SetSize(200, 35)
-        recruitBtn:SetText("🔍 Recruit Players")
+        recruitBtn:SetText("Recruit Players")
         recruitBtn:SetScript("OnClick", function()
-            print("[FGR] Opening recruitment window...")
             if ns.RecruitmentFrame then
                 ns.RecruitmentFrame:Show()
+                MainFrame:Hide()
             else
                 print("|cFFFF0000[FGR]|r Recruitment system not available")
             end
